@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Tarefas</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1><i class="fas fa-tasks"></i> Gerenciador de Tarefas</h1>
+            <nav class="nav">
+                <button class="nav-btn active" data-page="dashboard">
+                    <i class="fas fa-home"></i> Dashboard
+                </button>
+                <button class="nav-btn" data-page="categories">
+                    <i class="fas fa-tags"></i> Categorias
+                </button>
+            </nav>
+        </header>
+
+        <!-- Dashboard Page -->
+        <div id="dashboard" class="page active">
+            <div class="page-header">
+                <h2>Dashboard de Tarefas</h2>
+                <button class="btn btn-primary" onclick="showAddTaskModal()">
+                    <i class="fas fa-plus"></i> Nova Tarefa
+                </button>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters">
+                <select id="statusFilter" onchange="filterTasks()">
+                    <option value="">Todas as tarefas</option>
+                    <option value="pending">Pendentes</option>
+                    <option value="completed">Concluídas</option>
+                </select>
+                <select id="categoryFilter" onchange="filterTasks()">
+                    <option value="">Todas as categorias</option>
+                </select>
+            </div>
+
+            <!-- Tasks List -->
+            <div id="tasksList" class="tasks-list">
+                <!-- Tasks will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Categories Page -->
+        <div id="categories" class="page">
+            <div class="page-header">
+                <h2>Gerenciamento de Categorias</h2>
+                <button class="btn btn-primary" onclick="showAddCategoryModal()">
+                    <i class="fas fa-plus"></i> Nova Categoria
+                </button>
+            </div>
+
+            <div id="categoriesList" class="categories-list">
+                <!-- Categories will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Task Modal -->
+    <div id="addTaskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Nova Tarefa</h3>
+                <span class="close" onclick="closeModal('addTaskModal')">&times;</span>
+            </div>
+            <form id="addTaskForm">
+                <div class="form-group">
+                    <label for="taskTitle">Título:</label>
+                    <input type="text" id="taskTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="taskDescription">Descrição:</label>
+                    <textarea id="taskDescription" rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="taskStatus">Status:</label>
+                    <select id="taskStatus">
+                        <option value="pending">Pendente</option>
+                        <option value="completed">Concluída</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Categorias:</label>
+                    <div id="taskCategories" class="categories-checkboxes">
+                        <!-- Categories will be loaded here -->
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addTaskModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Task Modal -->
+    <div id="editTaskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Editar Tarefa</h3>
+                <span class="close" onclick="closeModal('editTaskModal')">&times;</span>
+            </div>
+            <form id="editTaskForm">
+                <input type="hidden" id="editTaskId">
+                <div class="form-group">
+                    <label for="editTaskTitle">Título:</label>
+                    <input type="text" id="editTaskTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="editTaskDescription">Descrição:</label>
+                    <textarea id="editTaskDescription" rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editTaskStatus">Status:</label>
+                    <select id="editTaskStatus">
+                        <option value="pending">Pendente</option>
+                        <option value="completed">Concluída</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Categorias:</label>
+                    <div id="editTaskCategories" class="categories-checkboxes">
+                        <!-- Categories will be loaded here -->
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editTaskModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Category Modal -->
+    <div id="addCategoryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Nova Categoria</h3>
+                <span class="close" onclick="closeModal('addCategoryModal')">&times;</span>
+            </div>
+            <form id="addCategoryForm">
+                <div class="form-group">
+                    <label for="categoryName">Nome:</label>
+                    <input type="text" id="categoryName" required>
+                </div>
+                <div class="form-group">
+                    <label for="categoryColor">Cor:</label>
+                    <input type="color" id="categoryColor" value="#007bff">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addCategoryModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Category Modal -->
+    <div id="editCategoryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Editar Categoria</h3>
+                <span class="close" onclick="closeModal('editCategoryModal')">&times;</span>
+            </div>
+            <form id="editCategoryForm">
+                <input type="hidden" id="editCategoryId">
+                <div class="form-group">
+                    <label for="editCategoryName">Nome:</label>
+                    <input type="text" id="editCategoryName" required>
+                </div>
+                <div class="form-group">
+                    <label for="editCategoryColor">Cor:</label>
+                    <input type="color" id="editCategoryColor">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editCategoryModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
