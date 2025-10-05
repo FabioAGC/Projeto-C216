@@ -166,3 +166,4 @@ docker exec -it c216-postgres-1 psql -U postgres -d taskmanager
 3. **Testes**: Criar testes automatizados
 4. **Deploy**: Configurar para produção
 5. **Monitoramento**: Adicionar logs e métricas
+
