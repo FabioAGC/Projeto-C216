@@ -2,187 +2,110 @@
 const API_BASE_URL = 'http://localhost:5000';
 
 // Estado global da aplicação
-let tasks = [];
-let categories = [];
-let currentTaskId = null;
-let currentCategoryId = null;
+const state = {
+    tasks: [],
+    categories: [],
+    isLoading: {
+        tasks: false,
+        categories: false,
+    }
+};
+
+// Elementos do DOM
+const dom = {
+    tasksList: document.getElementById('tasksList'),
+    categoriesList: document.getElementById('categoriesList'),
+    categoryFilter: document.getElementById('categoryFilter'),
+    taskCategoriesCheckboxes: document.getElementById('taskCategories'),
+    editTaskCategoriesCheckboxes: document.getElementById('editTaskCategories'),
+    notificationContainer: document.getElementById('notification-container'),
+    pages: document.querySelectorAll('.page'),
+    navButtons: document.querySelectorAll('.nav-btn'),
+    themeToggleButton: document.getElementById('theme-toggle'),
+};
 
 // Inicialização da aplicação
-document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
-});
+document.addEventListener('DOMContentLoaded', initializeApp);
 
 async function initializeApp() {
-    try {
-        await loadCategories();
-        await loadTasks();
-        setupEventListeners();
-    } catch (error) {
-        console.error('Erro ao inicializar aplicação:', error);
-        showNotification('Erro ao carregar dados', 'error');
-    }
+    loadTheme(); // Carrega o tema salvo ou preferencial
+    setupEventListeners();
+    await loadInitialData();
 }
 
-function setupEventListeners() {
-    // Navegação
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const page = this.getAttribute('data-page');
-            showPage(page);
-        });
-    });
-
-    // Formulários
-    document.getElementById('addTaskForm').addEventListener('submit', handleAddTask);
-    document.getElementById('editTaskForm').addEventListener('submit', handleEditTask);
-    document.getElementById('addCategoryForm').addEventListener('submit', handleAddCategory);
-    document.getElementById('editCategoryForm').addEventListener('submit', handleEditCategory);
-
-    // Fechar modais ao clicar fora
-    window.addEventListener('click', function(event) {
-        if (event.target.classList.contains('modal')) {
-            closeModal(event.target.id);
-        }
-    });
+async function loadInitialData() {
+    await Promise.all([loadCategories(), loadTasks()]);
 }
 
-// Navegação entre páginas
-function showPage(pageName) {
-    // Esconder todas as páginas
-    document.querySelectorAll('.page').forEach(page => {
-        page.classList.remove('active');
-    });
+// ---- Funções de Renderização e UI ---- //
 
-    // Remover classe active de todos os botões de navegação
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-
-    // Mostrar página selecionada
-    document.getElementById(pageName).classList.add('active');
-    
-    // Adicionar classe active ao botão correspondente
-    document.querySelector(`[data-page="${pageName}"]`).classList.add('active');
-
-    // Carregar dados específicos da página
-    if (pageName === 'dashboard') {
-        loadTasks();
-    } else if (pageName === 'categories') {
-        loadCategories();
-    }
-}
-
-// Carregar tarefas
-async function loadTasks() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/tasks`);
-        if (!response.ok) throw new Error('Erro ao carregar tarefas');
-        
-        tasks = await response.json();
-        renderTasks();
-        updateCategoryFilter();
-    } catch (error) {
-        console.error('Erro ao carregar tarefas:', error);
-        showNotification('Erro ao carregar tarefas', 'error');
-    }
-}
-
-// Carregar categorias
-async function loadCategories() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/categories`);
-        if (!response.ok) throw new Error('Erro ao carregar categorias');
-        
-        categories = await response.json();
-        renderCategories();
-        updateCategoryCheckboxes();
-    } catch (error) {
-        console.error('Erro ao carregar categorias:', error);
-        showNotification('Erro ao carregar categorias', 'error');
-    }
-}
-
-// Renderizar tarefas
 function renderTasks() {
-    const tasksList = document.getElementById('tasksList');
     const statusFilter = document.getElementById('statusFilter').value;
-    const categoryFilter = document.getElementById('categoryFilter').value;
+    const categoryFilter = dom.categoryFilter.value;
 
-    let filteredTasks = tasks;
-
-    // Filtrar por status
+    let filteredTasks = [...state.tasks];
     if (statusFilter) {
         filteredTasks = filteredTasks.filter(task => task.status === statusFilter);
     }
-
-    // Filtrar por categoria
     if (categoryFilter) {
         filteredTasks = filteredTasks.filter(task => 
             task.categories.some(cat => cat.id.toString() === categoryFilter)
         );
     }
 
-    if (filteredTasks.length === 0) {
-        tasksList.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-tasks"></i>
-                <h3>Nenhuma tarefa encontrada</h3>
-                <p>Adicione uma nova tarefa para começar</p>
-            </div>
-        `;
+    if (state.isLoading.tasks) {
+        dom.tasksList.innerHTML = `<div class="loader-container"><div class="loader"></div></div>`;
         return;
     }
 
-    tasksList.innerHTML = filteredTasks.map(task => `
+    if (filteredTasks.length === 0) {
+        dom.tasksList.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-box-open"></i>
+                <h3>Nenhuma tarefa encontrada</h3>
+                <p>Crie uma nova tarefa ou ajuste os filtros.</p>
+            </div>`;
+        return;
+    }
+
+    dom.tasksList.innerHTML = filteredTasks.map(task => `
         <div class="task-card ${task.status}">
-            <div class="task-header">
-                <div>
-                    <div class="task-title">${escapeHtml(task.title)}</div>
-                    <span class="task-status ${task.status}">${task.status === 'pending' ? 'Pendente' : 'Concluída'}</span>
-                </div>
-            </div>
+            <div class="task-title">${escapeHtml(task.title)}</div>
             ${task.description ? `<div class="task-description">${escapeHtml(task.description)}</div>` : ''}
             ${task.categories.length > 0 ? `
                 <div class="task-categories">
                     ${task.categories.map(cat => `
-                        <span class="category-tag" style="background-color: ${cat.color}">
-                            ${escapeHtml(cat.name)}
-                        </span>
+                        <span class="category-tag" style="background-color: ${cat.color};">${escapeHtml(cat.name)}</span>
                     `).join('')}
-                </div>
-            ` : ''}
+                </div>` : ''}
             <div class="task-actions">
                 <button class="btn btn-success" onclick="toggleTaskStatus(${task.id})">
-                    <i class="fas fa-${task.status === 'pending' ? 'check' : 'undo'}"></i>
-                    ${task.status === 'pending' ? 'Concluir' : 'Reabrir'}
+                    <i class="fas fa-${task.status === 'pending' ? 'check' : 'undo'}"></i> ${task.status === 'pending' ? 'Concluir' : 'Reabrir'}
                 </button>
-                <button class="btn btn-warning" onclick="editTask(${task.id})">
-                    <i class="fas fa-edit"></i> Editar
-                </button>
-                <button class="btn btn-danger" onclick="deleteTask(${task.id})">
-                    <i class="fas fa-trash"></i> Excluir
-                </button>
+                <button class="btn btn-warning" onclick="editTask(${task.id})"><i class="fas fa-edit"></i> Editar</button>
+                <button class="btn btn-danger" onclick="deleteTask(${task.id})"><i class="fas fa-trash"></i> Excluir</button>
             </div>
         </div>
     `).join('');
 }
 
-// Renderizar categorias
 function renderCategories() {
-    const categoriesList = document.getElementById('categoriesList');
-
-    if (categories.length === 0) {
-        categoriesList.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-tags"></i>
-                <h3>Nenhuma categoria encontrada</h3>
-                <p>Adicione uma nova categoria para começar</p>
-            </div>
-        `;
+    if (state.isLoading.categories) {
+        dom.categoriesList.innerHTML = `<div class="loader-container"><div class="loader"></div></div>`;
         return;
     }
 
-    categoriesList.innerHTML = categories.map(category => `
+    if (state.categories.length === 0) {
+        dom.categoriesList.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-tags"></i>
+                <h3>Nenhuma categoria encontrada</h3>
+                <p>Crie categorias para organizar suas tarefas.</p>
+            </div>`;
+        return;
+    }
+
+    dom.categoriesList.innerHTML = state.categories.map(category => `
         <div class="category-card">
             <div class="category-header">
                 <div class="category-name">
@@ -190,380 +113,401 @@ function renderCategories() {
                     ${escapeHtml(category.name)}
                 </div>
                 <div class="category-actions">
-                    <button class="btn btn-warning" onclick="editCategory(${category.id})">
-                        <i class="fas fa-edit"></i> Editar
-                    </button>
-                    <button class="btn btn-danger" onclick="deleteCategory(${category.id})">
-                        <i class="fas fa-trash"></i> Excluir
-                    </button>
+                    <button class="btn btn-warning" onclick="editCategory(${category.id})"><i class="fas fa-edit"></i> Editar</button>
+                    <button class="btn btn-danger" onclick="deleteCategory(${category.id})"><i class="fas fa-trash"></i> Excluir</button>
                 </div>
             </div>
         </div>
     `).join('');
 }
 
-// Atualizar filtro de categorias
-function updateCategoryFilter() {
-    const categoryFilter = document.getElementById('categoryFilter');
-    categoryFilter.innerHTML = '<option value="">Todas as categorias</option>' +
-        categories.map(cat => `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`).join('');
-}
+function updateCategoryUI() {
+    // Atualizar filtro
+    dom.categoryFilter.innerHTML = '<option value="">Todas as categorias</option>' +
+        state.categories.map(cat => `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`).join('');
 
-// Atualizar checkboxes de categorias
-function updateCategoryCheckboxes() {
-    const taskCategories = document.getElementById('taskCategories');
-    const editTaskCategories = document.getElementById('editTaskCategories');
-    
-    const categoryHtml = categories.map(cat => `
+    // Atualizar checkboxes nos modais
+    const categoryHtml = state.categories.map(cat => `
         <div class="category-checkbox">
-            <input type="checkbox" id="cat-${cat.id}" value="${cat.id}">
-            <label for="cat-${cat.id}">
+            <input type="checkbox" id="cat-add-${cat.id}" value="${cat.id}">
+            <label for="cat-add-${cat.id}">
                 <div class="category-checkbox-color" style="background-color: ${cat.color}"></div>
                 ${escapeHtml(cat.name)}
             </label>
         </div>
     `).join('');
-
-    if (taskCategories) taskCategories.innerHTML = categoryHtml;
-    if (editTaskCategories) editTaskCategories.innerHTML = categoryHtml;
-}
-
-// Filtrar tarefas
-function filterTasks() {
-    renderTasks();
-}
-
-// Mostrar modal de adicionar tarefa
-function showAddTaskModal() {
-    document.getElementById('addTaskForm').reset();
-    updateCategoryCheckboxes();
-    document.getElementById('addTaskModal').style.display = 'block';
-}
-
-// Mostrar modal de editar tarefa
-function editTask(taskId) {
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) return;
-
-    currentTaskId = taskId;
-    document.getElementById('editTaskId').value = taskId;
-    document.getElementById('editTaskTitle').value = task.title;
-    document.getElementById('editTaskDescription').value = task.description || '';
-    document.getElementById('editTaskStatus').value = task.status;
-
-    // Marcar categorias selecionadas
-    updateCategoryCheckboxes();
-    setTimeout(() => {
-        task.categories.forEach(cat => {
-            const checkbox = document.querySelector(`#editTaskCategories input[value="${cat.id}"]`);
-            if (checkbox) checkbox.checked = true;
-        });
-    }, 100);
-
-    document.getElementById('editTaskModal').style.display = 'block';
-}
-
-// Mostrar modal de adicionar categoria
-function showAddCategoryModal() {
-    document.getElementById('addCategoryForm').reset();
-    document.getElementById('addCategoryModal').style.display = 'block';
-}
-
-// Mostrar modal de editar categoria
-function editCategory(categoryId) {
-    const category = categories.find(c => c.id === categoryId);
-    if (!category) return;
-
-    currentCategoryId = categoryId;
-    document.getElementById('editCategoryId').value = categoryId;
-    document.getElementById('editCategoryName').value = category.name;
-    document.getElementById('editCategoryColor').value = category.color;
-
-    document.getElementById('editCategoryModal').style.display = 'block';
-}
-
-// Fechar modal
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-}
-
-// Adicionar tarefa
-async function handleAddTask(event) {
-    event.preventDefault();
+    const editCategoryHtml = state.categories.map(cat => `
+        <div class="category-checkbox">
+            <input type="checkbox" id="cat-edit-${cat.id}" value="${cat.id}">
+            <label for="cat-edit-${cat.id}">
+                <div class="category-checkbox-color" style="background-color: ${cat.color}"></div>
+                ${escapeHtml(cat.name)}
+            </label>
+        </div>
+    `).join('');
     
-    const formData = new FormData(event.target);
-    const selectedCategories = Array.from(document.querySelectorAll('#taskCategories input:checked'))
-        .map(cb => parseInt(cb.value));
+    dom.taskCategoriesCheckboxes.innerHTML = categoryHtml;
+    dom.editTaskCategoriesCheckboxes.innerHTML = editCategoryHtml;
+}
 
-    const taskData = {
-        title: document.getElementById('taskTitle').value,
-        description: document.getElementById('taskDescription').value,
-        status: document.getElementById('taskStatus').value,
-        user_id: 1
-    };
 
-    try {
-        const response = await fetch(`${API_BASE_URL}/tasks`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(taskData)
-        });
+// ---- Funções de Event Listeners ---- //
 
-        if (!response.ok) throw new Error('Erro ao criar tarefa');
+function setupEventListeners() {
+    // Navegação
+    dom.navButtons.forEach(btn => {
+        btn.addEventListener('click', () => showPage(btn.getAttribute('data-page')));
+    });
 
-        const result = await response.json();
-        
-        // Associar categorias
-        for (const categoryId of selectedCategories) {
-            await fetch(`${API_BASE_URL}/tasks/${result.id}/categories/${categoryId}`, {
-                method: 'POST'
-            });
+    // Submissão de formulários
+    document.getElementById('addTaskForm').addEventListener('submit', handleAddTask);
+    document.getElementById('editTaskForm').addEventListener('submit', handleEditTask);
+    document.getElementById('addCategoryForm').addEventListener('submit', handleAddCategory);
+    document.getElementById('editCategoryForm').addEventListener('submit', handleEditCategory);
+    
+    // Atualização da cor no picker
+    document.getElementById('categoryColor').addEventListener('input', (e) => {
+        document.getElementById('categoryColorValue').textContent = e.target.value;
+    });
+    document.getElementById('editCategoryColor').addEventListener('input', (e) => {
+        document.getElementById('editCategoryColorValue').textContent = e.target.value;
+    });
+
+    // Fechar modais
+    window.addEventListener('click', (event) => {
+        if (event.target.classList.contains('modal')) {
+            closeModal(event.target.id);
         }
+    });
 
+    // Listener para o botão de tema
+    dom.themeToggleButton.addEventListener('click', toggleTheme);
+}
+
+
+// ---- Funções de Dados (API e Estado) ---- //
+
+async function apiRequest(endpoint, method = 'GET', body = null) {
+    try {
+        const options = {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+        };
+        if (body) {
+            options.body = JSON.stringify(body);
+        }
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
+            throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
+        }
+        return response.status === 204 ? null : await response.json();
+    } catch (error) {
+        showNotification(`Erro: ${error.message}`, 'error');
+        throw error;
+    }
+}
+
+async function loadTasks() {
+    state.isLoading.tasks = true;
+    renderTasks();
+    try {
+        state.tasks = await apiRequest('/tasks');
+    } finally {
+        state.isLoading.tasks = false;
+        renderTasks();
+    }
+}
+
+async function loadCategories() {
+    state.isLoading.categories = true;
+    renderCategories();
+    try {
+        state.categories = await apiRequest('/categories');
+        updateCategoryUI();
+    } finally {
+        state.isLoading.categories = false;
+        renderCategories();
+    }
+}
+
+
+// ---- Funções de Ação (Manipuladores de Eventos) ---- //
+
+async function handleAddTask(e) {
+    e.preventDefault();
+    const form = e.target;
+    const taskData = {
+        title: form.querySelector('#taskTitle').value,
+        description: form.querySelector('#taskDescription').value,
+        status: form.querySelector('#taskStatus').value,
+        user_id: 1 // Default user
+    };
+    
+    try {
+        const newTask = await apiRequest('/tasks', 'POST', taskData);
+        const selectedCategories = getSelectedCategories(form, '#taskCategories');
+        if (selectedCategories.length > 0) {
+            await updateTaskCategories(newTask.id, [], selectedCategories);
+        }
+        
+        const fullNewTask = await apiRequest(`/tasks/${newTask.id}`);
+        state.tasks.push(fullNewTask);
+        
+        renderTasks();
         closeModal('addTaskModal');
-        await loadTasks();
         showNotification('Tarefa criada com sucesso!', 'success');
     } catch (error) {
-        console.error('Erro ao criar tarefa:', error);
-        showNotification('Erro ao criar tarefa', 'error');
+        console.error('Falha ao criar tarefa:', error);
     }
 }
 
-// Editar tarefa
-async function handleEditTask(event) {
-    event.preventDefault();
-    
-    const taskId = document.getElementById('editTaskId').value;
-    const selectedCategories = Array.from(document.querySelectorAll('#editTaskCategories input:checked'))
-        .map(cb => parseInt(cb.value));
-
+async function handleEditTask(e) {
+    e.preventDefault();
+    const form = e.target;
+    const taskId = form.querySelector('#editTaskId').value;
     const taskData = {
-        title: document.getElementById('editTaskTitle').value,
-        description: document.getElementById('editTaskDescription').value,
-        status: document.getElementById('editTaskStatus').value
+        title: form.querySelector('#editTaskTitle').value,
+        description: form.querySelector('#editTaskDescription').value,
+        status: form.querySelector('#editTaskStatus').value
     };
 
     try {
-        const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(taskData)
-        });
+        await apiRequest(`/tasks/${taskId}`, 'PUT', taskData);
+        
+        const originalTask = state.tasks.find(t => t.id == taskId);
+        const originalCategoryIds = originalTask.categories.map(c => c.id);
+        const newCategoryIds = getSelectedCategories(form, '#editTaskCategories');
+        
+        await updateTaskCategories(taskId, originalCategoryIds, newCategoryIds);
 
-        if (!response.ok) throw new Error('Erro ao atualizar tarefa');
-
-        // Atualizar categorias
-        const task = tasks.find(t => t.id == taskId);
-        if (task) {
-            // Remover todas as categorias existentes
-            for (const cat of task.categories) {
-                await fetch(`${API_BASE_URL}/tasks/${taskId}/categories/${cat.id}`, {
-                    method: 'DELETE'
-                });
-            }
-            
-            // Adicionar novas categorias
-            for (const categoryId of selectedCategories) {
-                await fetch(`${API_BASE_URL}/tasks/${taskId}/categories/${categoryId}`, {
-                    method: 'POST'
-                });
-            }
+        const updatedTask = await apiRequest(`/tasks/${taskId}`);
+        const taskIndex = state.tasks.findIndex(t => t.id == taskId);
+        if (taskIndex !== -1) {
+            state.tasks[taskIndex] = updatedTask;
         }
-
+        
+        renderTasks();
         closeModal('editTaskModal');
-        await loadTasks();
         showNotification('Tarefa atualizada com sucesso!', 'success');
     } catch (error) {
-        console.error('Erro ao atualizar tarefa:', error);
-        showNotification('Erro ao atualizar tarefa', 'error');
+        console.error('Falha ao editar tarefa:', error);
     }
 }
 
-// Adicionar categoria
-async function handleAddCategory(event) {
-    event.preventDefault();
-    
+async function handleAddCategory(e) {
+    e.preventDefault();
+    const form = e.target;
     const categoryData = {
-        name: document.getElementById('categoryName').value,
-        color: document.getElementById('categoryColor').value
+        name: form.querySelector('#categoryName').value,
+        color: form.querySelector('#categoryColor').value
     };
-
     try {
-        const response = await fetch(`${API_BASE_URL}/categories`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(categoryData)
-        });
-
-        if (!response.ok) throw new Error('Erro ao criar categoria');
-
+        const newCategoryInfo = await apiRequest('/categories', 'POST', categoryData);
+        const fullNewCategory = await apiRequest(`/categories/${newCategoryInfo.id}`); // Fetch full object if needed
+        state.categories.push(fullNewCategory);
+        
+        renderCategories();
+        updateCategoryUI();
         closeModal('addCategoryModal');
-        await loadCategories();
         showNotification('Categoria criada com sucesso!', 'success');
-    } catch (error) {
-        console.error('Erro ao criar categoria:', error);
-        showNotification('Erro ao criar categoria', 'error');
+    } catch(error) {
+         console.error('Falha ao criar categoria:', error);
     }
 }
 
-// Editar categoria
-async function handleEditCategory(event) {
-    event.preventDefault();
-    
-    const categoryId = document.getElementById('editCategoryId').value;
+async function handleEditCategory(e) {
+    e.preventDefault();
+    const form = e.target;
+    const categoryId = form.querySelector('#editCategoryId').value;
     const categoryData = {
-        name: document.getElementById('editCategoryName').value,
-        color: document.getElementById('editCategoryColor').value
+        name: form.querySelector('#editCategoryName').value,
+        color: form.querySelector('#editCategoryColor').value
     };
-
+    
     try {
-        const response = await fetch(`${API_BASE_URL}/categories/${categoryId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(categoryData)
-        });
+        await apiRequest(`/categories/${categoryId}`, 'PUT', categoryData);
 
-        if (!response.ok) throw new Error('Erro ao atualizar categoria');
-
+        const categoryIndex = state.categories.findIndex(c => c.id == categoryId);
+        if (categoryIndex !== -1) {
+            state.categories[categoryIndex] = { ...state.categories[categoryIndex], ...categoryData };
+        }
+        
+        renderCategories();
+        updateCategoryUI();
+        await loadTasks(); // Recarregar tarefas para refletir a mudança de cor/nome
         closeModal('editCategoryModal');
-        await loadCategories();
         showNotification('Categoria atualizada com sucesso!', 'success');
     } catch (error) {
-        console.error('Erro ao atualizar categoria:', error);
-        showNotification('Erro ao atualizar categoria', 'error');
+        console.error('Falha ao editar categoria:', error);
     }
 }
 
-// Alternar status da tarefa
-async function toggleTaskStatus(taskId) {
-    const task = tasks.find(t => t.id === taskId);
+window.toggleTaskStatus = async function(taskId) {
+    const task = state.tasks.find(t => t.id === taskId);
     if (!task) return;
-
     const newStatus = task.status === 'pending' ? 'completed' : 'pending';
-
+    
     try {
-        const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ status: newStatus })
-        });
-
-        if (!response.ok) throw new Error('Erro ao atualizar status da tarefa');
-
-        await loadTasks();
-        showNotification(`Tarefa marcada como ${newStatus === 'pending' ? 'pendente' : 'concluída'}!`, 'success');
+        await apiRequest(`/tasks/${taskId}`, 'PUT', { status: newStatus });
+        task.status = newStatus;
+        renderTasks();
+        showNotification(`Tarefa marcada como ${newStatus === 'completed' ? 'concluída' : 'pendente'}.`, 'success');
     } catch (error) {
-        console.error('Erro ao atualizar status da tarefa:', error);
-        showNotification('Erro ao atualizar status da tarefa', 'error');
+        console.error('Falha ao alterar status:', error);
     }
-}
+};
 
-// Excluir tarefa
-async function deleteTask(taskId) {
+window.deleteTask = async function(taskId) {
     if (!confirm('Tem certeza que deseja excluir esta tarefa?')) return;
-
+    
     try {
-        const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
-            method: 'DELETE'
-        });
-
-        if (!response.ok) throw new Error('Erro ao excluir tarefa');
-
-        await loadTasks();
+        await apiRequest(`/tasks/${taskId}`, 'DELETE');
+        state.tasks = state.tasks.filter(t => t.id !== taskId);
+        renderTasks();
         showNotification('Tarefa excluída com sucesso!', 'success');
     } catch (error) {
-        console.error('Erro ao excluir tarefa:', error);
-        showNotification('Erro ao excluir tarefa', 'error');
+        console.error('Falha ao excluir tarefa:', error);
     }
-}
+};
 
-// Excluir categoria
-async function deleteCategory(categoryId) {
-    if (!confirm('Tem certeza que deseja excluir esta categoria?')) return;
-
+window.deleteCategory = async function(categoryId) {
+    if (!confirm('Tem certeza que deseja excluir esta categoria? Esta ação não pode ser desfeita.')) return;
+    
     try {
-        const response = await fetch(`${API_BASE_URL}/categories/${categoryId}`, {
-            method: 'DELETE'
-        });
-
-        if (!response.ok) throw new Error('Erro ao excluir categoria');
-
-        await loadCategories();
+        await apiRequest(`/categories/${categoryId}`, 'DELETE');
+        state.categories = state.categories.filter(c => c.id !== categoryId);
+        renderCategories();
+        updateCategoryUI();
+        await loadTasks(); // As tarefas associadas podem ter mudado
         showNotification('Categoria excluída com sucesso!', 'success');
     } catch (error) {
-        console.error('Erro ao excluir categoria:', error);
-        showNotification('Erro ao excluir categoria', 'error');
+        console.error('Falha ao excluir categoria:', error);
     }
+};
+
+window.editTask = function(taskId) {
+    const task = state.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const form = document.getElementById('editTaskForm');
+    form.querySelector('#editTaskId').value = taskId;
+    form.querySelector('#editTaskTitle').value = task.title;
+    form.querySelector('#editTaskDescription').value = task.description || '';
+    form.querySelector('#editTaskStatus').value = task.status;
+
+    form.querySelectorAll('#editTaskCategories input[type="checkbox"]').forEach(cb => cb.checked = false);
+    task.categories.forEach(cat => {
+        const checkbox = form.querySelector(`#editTaskCategories input[value="${cat.id}"]`);
+        if (checkbox) checkbox.checked = true;
+    });
+
+    openModal('editTaskModal');
+};
+
+window.editCategory = function(categoryId) {
+    const category = state.categories.find(c => c.id === categoryId);
+    if (!category) return;
+    
+    const form = document.getElementById('editCategoryForm');
+    form.querySelector('#editCategoryId').value = categoryId;
+    form.querySelector('#editCategoryName').value = category.name;
+    form.querySelector('#editCategoryColor').value = category.color;
+    form.querySelector('#editCategoryColorValue').textContent = category.color;
+
+    openModal('editCategoryModal');
+};
+
+// ---- Funções Utilitárias ---- //
+
+function showPage(pageName) {
+    dom.pages.forEach(page => page.classList.toggle('active', page.id === pageName));
+    dom.navButtons.forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-page') === pageName));
 }
 
-// Mostrar notificação
-function showNotification(message, type = 'info') {
-    // Criar elemento de notificação
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-        <span>${message}</span>
-    `;
+window.filterTasks = renderTasks;
 
-    // Adicionar estilos se não existirem
-    if (!document.getElementById('notification-styles')) {
-        const styles = document.createElement('style');
-        styles.id = 'notification-styles';
-        styles.textContent = `
-            .notification {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                padding: 15px 20px;
-                border-radius: 8px;
-                color: white;
-                font-weight: 500;
-                z-index: 10000;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-                animation: slideInRight 0.3s ease;
-            }
-            .notification-success { background: #27ae60; }
-            .notification-error { background: #e74c3c; }
-            .notification-info { background: #3498db; }
-            @keyframes slideInRight {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
-        `;
-        document.head.appendChild(styles);
+function getSelectedCategories(form, containerSelector) {
+    return Array.from(form.querySelectorAll(`${containerSelector} input:checked`))
+        .map(cb => parseInt(cb.value));
+}
+
+async function updateTaskCategories(taskId, originalIds, newIds) {
+    const toAdd = newIds.filter(id => !originalIds.includes(id));
+    const toRemove = originalIds.filter(id => !newIds.includes(id));
+    
+    const promises = [
+        ...toAdd.map(catId => apiRequest(`/tasks/${taskId}/categories/${catId}`, 'POST')),
+        ...toRemove.map(catId => apiRequest(`/tasks/${taskId}/categories/${catId}`, 'DELETE'))
+    ];
+    await Promise.all(promises);
+}
+
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    modal.style.display = 'flex';
+    const firstInput = modal.querySelector('input[type="text"]');
+    if (firstInput) {
+        firstInput.focus();
     }
+}
+window.closeModal = function(modalId) {
+    const modal = document.getElementById(modalId);
+    const form = modal.querySelector('form');
+    if (form) form.reset();
+    modal.style.display = 'none';
+};
 
-    document.body.appendChild(notification);
+window.showAddTaskModal = () => openModal('addTaskModal');
+window.showAddCategoryModal = () => openModal('addCategoryModal');
 
-    // Remover notificação após 3 segundos
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+        <span>${escapeHtml(message)}</span>`;
+    dom.notificationContainer.appendChild(notification);
     setTimeout(() => {
-        notification.style.animation = 'slideInRight 0.3s ease reverse';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
+        notification.style.animation = 'slideInRight 0.4s ease-out reverse';
+        setTimeout(() => notification.remove(), 400);
     }, 3000);
 }
 
-// Escapar HTML para prevenir XSS
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
+// ---- Funções de Gerenciamento de Tema ---- //
+
+function applyTheme(theme) {
+    if (theme === 'dark') {
+        document.body.classList.add('dark-mode');
+        dom.themeToggleButton.innerHTML = '<i class="fas fa-sun"></i>'; // Ícone de Sol
+    } else {
+        document.body.classList.remove('dark-mode');
+        dom.themeToggleButton.innerHTML = '<i class="fas fa-moon"></i>'; // Ícone de Lua
+    }
+    localStorage.setItem('theme', theme);
+}
+
+function toggleTheme() {
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    applyTheme(newTheme);
+}
+
+function loadTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    if (savedTheme) {
+        applyTheme(savedTheme);
+    } else if (systemPrefersDark) {
+        applyTheme('dark');
+    } else {
+        applyTheme('light');
+    }
+}

@@ -3,27 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerenciador de Tarefas</title>
+    <title>Gerenciador de Tarefas Avançado</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
+    <div id="notification-container"></div>
+
     <div class="container">
-        <!-- Header -->
         <header class="header">
             <h1><i class="fas fa-tasks"></i> Gerenciador de Tarefas</h1>
-            <nav class="nav">
-                <button class="nav-btn active" data-page="dashboard">
-                    <i class="fas fa-home"></i> Dashboard
+            <div class="header-controls">
+                <nav class="nav">
+                    <button class="nav-btn active" data-page="dashboard">
+                        <i class="fas fa-home"></i> Dashboard
+                    </button>
+                    <button class="nav-btn" data-page="categories">
+                        <i class="fas fa-tags"></i> Categorias
+                    </button>
+                </nav>
+                <button id="theme-toggle" class="theme-toggle-btn" aria-label="Alternar tema">
+                    <i class="fas fa-moon"></i>
                 </button>
-                <button class="nav-btn" data-page="categories">
-                    <i class="fas fa-tags"></i> Categorias
-                </button>
-            </nav>
+            </div>
         </header>
 
-        <!-- Dashboard Page -->
-        <div id="dashboard" class="page active">
+        <main id="dashboard" class="page active">
             <div class="page-header">
                 <h2>Dashboard de Tarefas</h2>
                 <button class="btn btn-primary" onclick="showAddTaskModal()">
@@ -31,26 +36,25 @@
                 </button>
             </div>
 
-            <!-- Filters -->
             <div class="filters">
-                <select id="statusFilter" onchange="filterTasks()">
+                <select id="statusFilter" onchange="filterTasks()" aria-label="Filtrar por status">
                     <option value="">Todas as tarefas</option>
                     <option value="pending">Pendentes</option>
                     <option value="completed">Concluídas</option>
                 </select>
-                <select id="categoryFilter" onchange="filterTasks()">
+                <select id="categoryFilter" onchange="filterTasks()" aria-label="Filtrar por categoria">
                     <option value="">Todas as categorias</option>
                 </select>
             </div>
 
-            <!-- Tasks List -->
             <div id="tasksList" class="tasks-list">
-                <!-- Tasks will be loaded here -->
+                <div class="loader-container">
+                    <div class="loader"></div>
+                </div>
             </div>
-        </div>
+        </main>
 
-        <!-- Categories Page -->
-        <div id="categories" class="page">
+        <section id="categories" class="page">
             <div class="page-header">
                 <h2>Gerenciamento de Categorias</h2>
                 <button class="btn btn-primary" onclick="showAddCategoryModal()">
@@ -59,17 +63,18 @@
             </div>
 
             <div id="categoriesList" class="categories-list">
-                <!-- Categories will be loaded here -->
+                <div class="loader-container">
+                    <div class="loader"></div>
+                </div>
             </div>
-        </div>
+        </section>
     </div>
 
-    <!-- Add Task Modal -->
-    <div id="addTaskModal" class="modal">
+    <div id="addTaskModal" class="modal" role="dialog" aria-labelledby="addTaskModalTitle">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Nova Tarefa</h3>
-                <span class="close" onclick="closeModal('addTaskModal')">&times;</span>
+                <h3 id="addTaskModalTitle">Nova Tarefa</h3>
+                <button class="close" onclick="closeModal('addTaskModal')" aria-label="Fechar">&times;</button>
             </div>
             <form id="addTaskForm">
                 <div class="form-group">
@@ -90,8 +95,7 @@
                 <div class="form-group">
                     <label>Categorias:</label>
                     <div id="taskCategories" class="categories-checkboxes">
-                        <!-- Categories will be loaded here -->
-                    </div>
+                        </div>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('addTaskModal')">Cancelar</button>
@@ -101,12 +105,11 @@
         </div>
     </div>
 
-    <!-- Edit Task Modal -->
-    <div id="editTaskModal" class="modal">
+    <div id="editTaskModal" class="modal" role="dialog" aria-labelledby="editTaskModalTitle">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Editar Tarefa</h3>
-                <span class="close" onclick="closeModal('editTaskModal')">&times;</span>
+                <h3 id="editTaskModalTitle">Editar Tarefa</h3>
+                <button class="close" onclick="closeModal('editTaskModal')" aria-label="Fechar">&times;</button>
             </div>
             <form id="editTaskForm">
                 <input type="hidden" id="editTaskId">
@@ -128,8 +131,7 @@
                 <div class="form-group">
                     <label>Categorias:</label>
                     <div id="editTaskCategories" class="categories-checkboxes">
-                        <!-- Categories will be loaded here -->
-                    </div>
+                        </div>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('editTaskModal')">Cancelar</button>
@@ -139,12 +141,11 @@
         </div>
     </div>
 
-    <!-- Add Category Modal -->
-    <div id="addCategoryModal" class="modal">
+    <div id="addCategoryModal" class="modal" role="dialog" aria-labelledby="addCategoryModalTitle">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Nova Categoria</h3>
-                <span class="close" onclick="closeModal('addCategoryModal')">&times;</span>
+                <h3 id="addCategoryModalTitle">Nova Categoria</h3>
+                <button class="close" onclick="closeModal('addCategoryModal')" aria-label="Fechar">&times;</button>
             </div>
             <form id="addCategoryForm">
                 <div class="form-group">
@@ -153,7 +154,10 @@
                 </div>
                 <div class="form-group">
                     <label for="categoryColor">Cor:</label>
-                    <input type="color" id="categoryColor" value="#007bff">
+                    <div class="color-picker-wrapper">
+                        <input type="color" id="categoryColor" value="#3498db">
+                        <span id="categoryColorValue">#3498db</span>
+                    </div>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('addCategoryModal')">Cancelar</button>
@@ -163,12 +167,11 @@
         </div>
     </div>
 
-    <!-- Edit Category Modal -->
-    <div id="editCategoryModal" class="modal">
+    <div id="editCategoryModal" class="modal" role="dialog" aria-labelledby="editCategoryModalTitle">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Editar Categoria</h3>
-                <span class="close" onclick="closeModal('editCategoryModal')">&times;</span>
+                <h3 id="editCategoryModalTitle">Editar Categoria</h3>
+                <button class="close" onclick="closeModal('editCategoryModal')" aria-label="Fechar">&times;</button>
             </div>
             <form id="editCategoryForm">
                 <input type="hidden" id="editCategoryId">
@@ -178,7 +181,10 @@
                 </div>
                 <div class="form-group">
                     <label for="editCategoryColor">Cor:</label>
-                    <input type="color" id="editCategoryColor">
+                     <div class="color-picker-wrapper">
+                        <input type="color" id="editCategoryColor" value="#3498db">
+                        <span id="editCategoryColorValue">#3498db</span>
+                    </div>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('editCategoryModal')">Cancelar</button>
