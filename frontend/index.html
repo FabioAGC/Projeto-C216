@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Tarefas Avançado</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div id="notification-container"></div>
+
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-tasks"></i> Gerenciador de Tarefas</h1>
+            <div class="header-controls">
+                <nav class="nav">
+                    <button class="nav-btn active" data-page="dashboard">
+                        <i class="fas fa-home"></i> Dashboard
+                    </button>
+                    <button class="nav-btn" data-page="categories">
+                        <i class="fas fa-tags"></i> Categorias
+                    </button>
+                </nav>
+                <button id="theme-toggle" class="theme-toggle-btn" aria-label="Alternar tema">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </header>
+
+        <main id="dashboard" class="page active">
+            <div class="page-header">
+                <h2>Dashboard de Tarefas</h2>
+                <button class="btn btn-primary" onclick="showAddTaskModal()">
+                    <i class="fas fa-plus"></i> Nova Tarefa
+                </button>
+            </div>
+
+            <div class="filters">
+                <select id="statusFilter" onchange="filterTasks()" aria-label="Filtrar por status">
+                    <option value="">Todas as tarefas</option>
+                    <option value="pending">Pendentes</option>
+                    <option value="completed">Concluídas</option>
+                </select>
+                <select id="categoryFilter" onchange="filterTasks()" aria-label="Filtrar por categoria">
+                    <option value="">Todas as categorias</option>
+                </select>
+            </div>
+
+            <div id="tasksList" class="tasks-list">
+                <div class="loader-container">
+                    <div class="loader"></div>
+                </div>
+            </div>
+        </main>
+
+        <section id="categories" class="page">
+            <div class="page-header">
+                <h2>Gerenciamento de Categorias</h2>
+                <button class="btn btn-primary" onclick="showAddCategoryModal()">
+                    <i class="fas fa-plus"></i> Nova Categoria
+                </button>
+            </div>
+
+            <div id="categoriesList" class="categories-list">
+                <div class="loader-container">
+                    <div class="loader"></div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div id="addTaskModal" class="modal" role="dialog" aria-labelledby="addTaskModalTitle">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="addTaskModalTitle">Nova Tarefa</h3>
+                <button class="close" onclick="closeModal('addTaskModal')" aria-label="Fechar">&times;</button>
+            </div>
+            <form id="addTaskForm">
+                <div class="form-group">
+                    <label for="taskTitle">Título:</label>
+                    <input type="text" id="taskTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="taskDescription">Descrição:</label>
+                    <textarea id="taskDescription" rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="taskStatus">Status:</label>
+                    <select id="taskStatus">
+                        <option value="pending">Pendente</option>
+                        <option value="completed">Concluída</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Categorias:</label>
+                    <div id="taskCategories" class="categories-checkboxes">
+                        </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addTaskModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="editTaskModal" class="modal" role="dialog" aria-labelledby="editTaskModalTitle">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="editTaskModalTitle">Editar Tarefa</h3>
+                <button class="close" onclick="closeModal('editTaskModal')" aria-label="Fechar">&times;</button>
+            </div>
+            <form id="editTaskForm">
+                <input type="hidden" id="editTaskId">
+                <div class="form-group">
+                    <label for="editTaskTitle">Título:</label>
+                    <input type="text" id="editTaskTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="editTaskDescription">Descrição:</label>
+                    <textarea id="editTaskDescription" rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editTaskStatus">Status:</label>
+                    <select id="editTaskStatus">
+                        <option value="pending">Pendente</option>
+                        <option value="completed">Concluída</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Categorias:</label>
+                    <div id="editTaskCategories" class="categories-checkboxes">
+                        </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editTaskModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addCategoryModal" class="modal" role="dialog" aria-labelledby="addCategoryModalTitle">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="addCategoryModalTitle">Nova Categoria</h3>
+                <button class="close" onclick="closeModal('addCategoryModal')" aria-label="Fechar">&times;</button>
+            </div>
+            <form id="addCategoryForm">
+                <div class="form-group">
+                    <label for="categoryName">Nome:</label>
+                    <input type="text" id="categoryName" required>
+                </div>
+                <div class="form-group">
+                    <label for="categoryColor">Cor:</label>
+                    <div class="color-picker-wrapper">
+                        <input type="color" id="categoryColor" value="#3498db">
+                        <span id="categoryColorValue">#3498db</span>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addCategoryModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="editCategoryModal" class="modal" role="dialog" aria-labelledby="editCategoryModalTitle">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="editCategoryModalTitle">Editar Categoria</h3>
+                <button class="close" onclick="closeModal('editCategoryModal')" aria-label="Fechar">&times;</button>
+            </div>
+            <form id="editCategoryForm">
+                <input type="hidden" id="editCategoryId">
+                <div class="form-group">
+                    <label for="editCategoryName">Nome:</label>
+                    <input type="text" id="editCategoryName" required>
+                </div>
+                <div class="form-group">
+                    <label for="editCategoryColor">Cor:</label>
+                     <div class="color-picker-wrapper">
+                        <input type="color" id="editCategoryColor" value="#3498db">
+                        <span id="editCategoryColorValue">#3498db</span>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editCategoryModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
