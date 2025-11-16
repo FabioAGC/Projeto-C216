@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import time
 
@@ -213,6 +213,43 @@ def create_user():
     db.session.add(user)
     db.session.commit()
     return jsonify({'id': user.id, 'message': 'User created successfully'}), 201
+
+# Rota para estatísticas
+@app.route('/stats', methods=['GET'])
+def get_stats():
+    total_tasks = Task.query.count()
+    pending_tasks = Task.query.filter_by(status='pending').count()
+    completed_tasks = Task.query.filter_by(status='completed').count()
+    total_categories = Category.query.count()
+    
+    # Estatísticas por categoria
+    categories_stats = []
+    categories = Category.query.all()
+    for category in categories:
+        task_count = len(category.tasks)
+        categories_stats.append({
+            'id': category.id,
+            'name': category.name,
+            'color': category.color,
+            'task_count': task_count
+        })
+    
+    # Tarefas criadas nos últimos 7 dias
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    recent_tasks = Task.query.filter(Task.created_at >= seven_days_ago).count()
+    
+    # Taxa de conclusão
+    completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+    
+    return jsonify({
+        'total_tasks': total_tasks,
+        'pending_tasks': pending_tasks,
+        'completed_tasks': completed_tasks,
+        'total_categories': total_categories,
+        'categories_stats': categories_stats,
+        'recent_tasks': recent_tasks,
+        'completion_rate': round(completion_rate, 2)
+    })
 
 def wait_for_db():
     """Aguarda o banco de dados estar disponível"""
