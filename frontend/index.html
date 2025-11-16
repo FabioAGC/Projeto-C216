@@ -21,6 +21,12 @@
                     <button class="nav-btn" data-page="categories">
                         <i class="fas fa-tags"></i> Categorias
                     </button>
+                    <button class="nav-btn" data-page="stats">
+                        <i class="fas fa-chart-bar"></i> Estatísticas
+                    </button>
+                    <button class="nav-btn" data-page="audio-transcribe">
+                        <i class="fas fa-microphone"></i> Áudio
+                    </button>
                 </nav>
                 <button id="theme-toggle" class="theme-toggle-btn" aria-label="Alternar tema">
                     <i class="fas fa-moon"></i>
@@ -66,6 +72,77 @@
                 <div class="loader-container">
                     <div class="loader"></div>
                 </div>
+            </div>
+        </section>
+
+        <section id="stats" class="page">
+            <div class="page-header">
+                <h2>Estatísticas e Relatórios</h2>
+                <button class="btn btn-primary" onclick="loadStats()">
+                    <i class="fas fa-sync-alt"></i> Atualizar
+                </button>
+            </div>
+
+            <div id="statsContent" class="stats-container">
+                <div class="loader-container">
+                    <div class="loader"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="audio-transcribe" class="page">
+            <div class="page-header">
+                <h2>Transcrição de Áudio</h2>
+            </div>
+
+            <!-- Audio Recording Section -->
+            <div id="audio-section" class="audio-container">
+                <div class="audio-controls">
+                    <button id="record-btn" class="btn btn-primary" style="padding: 12px 20px; font-size: 16px;">
+                        <i class="fas fa-circle"></i> Iniciar Gravação
+                    </button>
+                    <p id="recording-status" class="recording-status">Pressione para gravar</p>
+                    <p id="timer" class="recording-timer">00:00</p>
+                </div>
+
+                <!-- Audio Playback -->
+                <div id="audio-playback-container" class="hidden audio-playback" style="display: none;">
+                    <audio id="audio-player" controls style="width: 100%; margin: 20px 0;"></audio>
+                    <div class="audio-actions">
+                        <button id="re-record-btn" class="btn btn-secondary">
+                            <i class="fas fa-redo"></i> Gravar Novamente
+                        </button>
+                        <button id="submit-audio-btn" class="btn btn-success">
+                            <i class="fas fa-check"></i> Transcrever
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transcript Display Section -->
+            <div id="transcript-section" class="transcript-container" style="display: none;">
+                <div class="form-group">
+                    <label for="transcript-input">Transcrição:</label>
+                    <textarea id="transcript-input" rows="6" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="objective-input">Objetivo:</label>
+                    <input type="text" id="objective-input" placeholder="Digite o objetivo da tarefa" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                <div class="form-actions">
+                    <button id="create-task-from-audio-btn" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Criar Tarefa
+                    </button>
+                    <button id="transcribe-another-btn" class="btn btn-primary">
+                        <i class="fas fa-microphone"></i> Gravar Outro Áudio
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading Overlay -->
+            <div id="loading-overlay" class="loading-overlay" style="display: none;">
+                <div class="spinner"></div>
+                <p id="loading-text">Processando...</p>
             </div>
         </section>
     </div>
