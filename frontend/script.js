@@ -1,5 +1,6 @@
 // Configuração da API
-const API_BASE_URL = 'http://localhost:5000';
+// Usar URLs relativas que serão proxiadas pelo nginx
+const API_BASE_URL = '/api';
 
 // Estado global da aplicação
 const state = {
@@ -162,7 +163,7 @@ function setupEventListeners() {
             showPage(pageName);
             // Carregar estatísticas quando a página for exibida
             if (pageName === 'stats') {
-                loadStats();
+                if (typeof loadStats === 'function') loadStats();
             }
         });
     });
@@ -173,13 +174,15 @@ function setupEventListeners() {
     document.getElementById('addCategoryForm').addEventListener('submit', handleAddCategory);
     document.getElementById('editCategoryForm').addEventListener('submit', handleEditCategory);
     
-    // Atualização da cor no picker
-    document.getElementById('categoryColor').addEventListener('input', (e) => {
-        document.getElementById('categoryColorValue').textContent = e.target.value;
-    });
-    document.getElementById('editCategoryColor').addEventListener('input', (e) => {
-        document.getElementById('editCategoryColorValue').textContent = e.target.value;
-    });
+    // Atualizar color picker ao abrir modal
+    const addCategoryColorPreview = document.querySelector('#addCategoryModal .color-preview');
+    const editCategoryColorPreview = document.querySelector('#editCategoryModal .color-preview');
+    if (addCategoryColorPreview) {
+        addCategoryColorPreview.addEventListener('click', () => openColorPicker('categoryColor'));
+    }
+    if (editCategoryColorPreview) {
+        editCategoryColorPreview.addEventListener('click', () => openColorPicker('editCategoryColor'));
+    }
 
     // Fechar modais
     window.addEventListener('click', (event) => {
@@ -206,8 +209,20 @@ async function apiRequest(endpoint, method = 'GET', body = null) {
         }
         const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
         if (!response.ok) {
+<<<<<<< HEAD
             const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
             throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
+=======
+            let errorMessage = `Erro HTTP: ${response.status}`;
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorMessage;
+            } catch (e) {
+                const text = await response.text();
+                if (text) errorMessage = text;
+            }
+            throw new Error(errorMessage);
+>>>>>>> e095f5d (Patch: erros de exclusão corrigdos)
         }
         return response.status === 204 ? null : await response.json();
     } catch (error) {
@@ -311,9 +326,14 @@ async function handleAddCategory(e) {
         color: form.querySelector('#categoryColor').value
     };
     try {
+<<<<<<< HEAD
         const newCategoryInfo = await apiRequest('/categories', 'POST', categoryData);
         const fullNewCategory = await apiRequest(`/categories/${newCategoryInfo.id}`); // Fetch full object if needed
         state.categories.push(fullNewCategory);
+=======
+        const newCategory = await apiRequest('/categories', 'POST', categoryData);
+        state.categories.push(newCategory);
+>>>>>>> e095f5d (Patch: erros de exclusão corrigdos)
         
         renderCategories();
         updateCategoryUI();
@@ -380,6 +400,7 @@ window.deleteTask = async function(taskId) {
 };
 
 window.deleteCategory = async function(categoryId) {
+<<<<<<< HEAD
     if (!confirm('Tem certeza que deseja excluir esta categoria? Esta ação não pode ser desfeita.')) return;
     
     try {
@@ -392,6 +413,23 @@ window.deleteCategory = async function(categoryId) {
     } catch (error) {
         console.error('Falha ao excluir categoria:', error);
     }
+=======
+    showDeleteConfirm(
+        'Tem certeza que deseja excluir esta categoria? Esta ação não pode ser desfeita.',
+        async () => {
+            try {
+                await apiRequest(`/categories/${categoryId}`, 'DELETE');
+                state.categories = state.categories.filter(c => c.id !== categoryId);
+                renderCategories();
+                updateCategoryUI();
+                await loadTasks();
+                showNotification('Categoria excluída com sucesso!', 'success');
+            } catch (error) {
+                console.error('Falha ao excluir categoria:', error);
+            }
+        }
+    );
+>>>>>>> e095f5d (Patch: erros de exclusão corrigdos)
 };
 
 window.editTask = function(taskId) {
@@ -422,6 +460,10 @@ window.editCategory = function(categoryId) {
     form.querySelector('#editCategoryName').value = category.name;
     form.querySelector('#editCategoryColor').value = category.color;
     form.querySelector('#editCategoryColorValue').textContent = category.color;
+<<<<<<< HEAD
+=======
+    document.querySelector('#editCategoryModal .color-preview').style.backgroundColor = category.color;
+>>>>>>> e095f5d (Patch: erros de exclusão corrigdos)
 
     openModal('editCategoryModal');
 };
@@ -462,11 +504,23 @@ function openModal(modalId) {
 window.closeModal = function(modalId) {
     const modal = document.getElementById(modalId);
     const form = modal.querySelector('form');
+<<<<<<< HEAD
     if (form) form.reset();
+=======
+    if (form) {
+        form.reset();
+        // Restaurar valores dos hidden inputs
+        const categoryColorInput = form.querySelector('#categoryColor');
+        const editCategoryColorInput = form.querySelector('#editCategoryColor');
+        if (categoryColorInput) categoryColorInput.value = '#3498db';
+        if (editCategoryColorInput) editCategoryColorInput.value = '#3498db';
+    }
+>>>>>>> e095f5d (Patch: erros de exclusão corrigdos)
     modal.style.display = 'none';
 };
 
 window.showAddTaskModal = () => openModal('addTaskModal');
+<<<<<<< HEAD
 window.showAddCategoryModal = () => openModal('addCategoryModal');
 
 // ---- Funções de Estatísticas ---- //
@@ -624,6 +678,16 @@ function renderStats(stats) {
     `;
 }
 
+=======
+window.showAddCategoryModal = () => {
+    // Resetar cores para o padrão
+    document.getElementById('categoryColor').value = '#3498db';
+    document.getElementById('categoryColorValue').textContent = '#3498db';
+    document.querySelector('#addCategoryModal .color-preview').style.backgroundColor = '#3498db';
+    openModal('addCategoryModal');
+};
+
+>>>>>>> e095f5d (Patch: erros de exclusão corrigdos)
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
@@ -675,6 +739,7 @@ function loadTheme() {
     }
 }
 
+<<<<<<< HEAD
 // ---- Funções de Gravação de Áudio ---- //
 
 let mediaRecorder;
@@ -885,3 +950,105 @@ audioElements.createTaskBtn.addEventListener('click', async () => {
         console.error('Erro ao criar tarefa:', error);
     }
 });
+=======
+// ---- Funções de Color Picker Customizado ---- //
+
+let currentColorInputId = null;
+let currentColorValue = '#3498db';
+
+window.openColorPicker = function(inputId) {
+    currentColorInputId = inputId;
+    const inputElement = document.getElementById(inputId);
+    currentColorValue = inputElement.value;
+    
+    document.getElementById('colorPickerInput').value = currentColorValue;
+    document.getElementById('colorPickerValue').textContent = currentColorValue;
+    
+    // Atualizar visual dos presets
+    document.querySelectorAll('.color-preset').forEach(preset => {
+        preset.classList.remove('selected');
+        if (preset.style.backgroundColor === rgbToHex(currentColorValue)) {
+            preset.classList.add('selected');
+        }
+    });
+    
+    openModal('colorPickerModal');
+};
+
+window.selectColorPreset = function(color) {
+    currentColorValue = color;
+    document.getElementById('colorPickerInput').value = color;
+    document.getElementById('colorPickerValue').textContent = color;
+    
+    document.querySelectorAll('.color-preset').forEach(preset => {
+        preset.classList.remove('selected');
+        if (preset.style.backgroundColor === color) {
+            preset.classList.add('selected');
+        }
+    });
+};
+
+window.confirmColorSelection = function() {
+    if (currentColorInputId) {
+        const hiddenInput = document.getElementById(currentColorInputId);
+        hiddenInput.value = currentColorValue;
+        
+        const valueSpanId = currentColorInputId === 'categoryColor' ? 'categoryColorValue' : 'editCategoryColorValue';
+        document.getElementById(valueSpanId).textContent = currentColorValue;
+        
+        // Atualizar o color-preview visual
+        const previewId = currentColorInputId === 'categoryColor' ? '#addCategoryModal .color-preview' : '#editCategoryModal .color-preview';
+        const previewElement = document.querySelector(previewId);
+        if (previewElement) {
+            previewElement.style.backgroundColor = currentColorValue;
+        }
+    }
+    closeColorPickerModal();
+};
+
+window.closeColorPickerModal = function() {
+    closeModal('colorPickerModal');
+};
+
+// Atualizar cor em tempo real no input
+document.addEventListener('DOMContentLoaded', function() {
+    const colorInput = document.getElementById('colorPickerInput');
+    if (colorInput) {
+        colorInput.addEventListener('input', (e) => {
+            currentColorValue = e.target.value;
+            document.getElementById('colorPickerValue').textContent = e.target.value;
+        });
+    }
+});
+
+function rgbToHex(c) {
+    if (c.startsWith('#')) return c;
+    const rgb = c.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+    if (rgb) {
+        return "#" + ((1 << 24) + (parseInt(rgb[1]) << 16) + (parseInt(rgb[2]) << 8) + parseInt(rgb[3])).toString(16).slice(1);
+    }
+    return c;
+}
+
+// ---- Funções de Confirmação de Exclusão Customizada ---- //
+
+let pendingDeleteCallback = null;
+
+window.showDeleteConfirm = function(message, callback) {
+    document.getElementById('deleteConfirmMessage').textContent = message;
+    pendingDeleteCallback = callback;
+    openModal('deleteConfirmModal');
+};
+
+window.confirmDelete = function() {
+    if (pendingDeleteCallback) {
+        pendingDeleteCallback();
+    }
+    closeDeleteConfirmModal();
+};
+
+window.closeDeleteConfirmModal = function() {
+    closeModal('deleteConfirmModal');
+    pendingDeleteCallback = null;
+};
+>>>>>>> e095f5d (Patch: erros de exclusão corrigdos)

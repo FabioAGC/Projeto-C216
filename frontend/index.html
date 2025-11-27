@@ -232,7 +232,12 @@
                 <div class="form-group">
                     <label for="categoryColor">Cor:</label>
                     <div class="color-picker-wrapper">
+<<<<<<< HEAD
                         <input type="color" id="categoryColor" value="#3498db">
+=======
+                        <input type="hidden" id="categoryColor" value="#3498db">
+                        <div class="color-preview" style="background-color: #3498db" onclick="openColorPicker('categoryColor')"></div>
+>>>>>>> e095f5d (Patch: erros de exclusão corrigdos)
                         <span id="categoryColorValue">#3498db</span>
                     </div>
                 </div>
@@ -259,7 +264,12 @@
                 <div class="form-group">
                     <label for="editCategoryColor">Cor:</label>
                      <div class="color-picker-wrapper">
+<<<<<<< HEAD
                         <input type="color" id="editCategoryColor" value="#3498db">
+=======
+                        <input type="hidden" id="editCategoryColor" value="#3498db">
+                        <div class="color-preview" style="background-color: #3498db" onclick="openColorPicker('editCategoryColor')"></div>
+>>>>>>> e095f5d (Patch: erros de exclusão corrigdos)
                         <span id="editCategoryColorValue">#3498db</span>
                     </div>
                 </div>
@@ -271,6 +281,56 @@
         </div>
     </div>
 
+<<<<<<< HEAD
+=======
+    <!-- Modal de seleção de cor customizado -->
+    <div id="colorPickerModal" class="modal color-picker-modal" role="dialog" aria-labelledby="colorPickerTitle">
+        <div class="modal-content color-picker-content">
+            <div class="modal-header">
+                <h3 id="colorPickerTitle">Escolha uma Cor</h3>
+                <button class="close" onclick="closeColorPickerModal()" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="color-picker-container">
+                <div class="color-input-group">
+                    <input type="color" id="colorPickerInput" value="#3498db">
+                    <span id="colorPickerValue">#3498db</span>
+                </div>
+                <div class="color-presets">
+                    <div class="color-preset" style="background-color: #3498db;" onclick="selectColorPreset('#3498db')"></div>
+                    <div class="color-preset" style="background-color: #e74c3c;" onclick="selectColorPreset('#e74c3c')"></div>
+                    <div class="color-preset" style="background-color: #27ae60;" onclick="selectColorPreset('#27ae60')"></div>
+                    <div class="color-preset" style="background-color: #f39c12;" onclick="selectColorPreset('#f39c12')"></div>
+                    <div class="color-preset" style="background-color: #9b59b6;" onclick="selectColorPreset('#9b59b6')"></div>
+                    <div class="color-preset" style="background-color: #1abc9c;" onclick="selectColorPreset('#1abc9c')"></div>
+                    <div class="color-preset" style="background-color: #34495e;" onclick="selectColorPreset('#34495e')"></div>
+                    <div class="color-preset" style="background-color: #e67e22;" onclick="selectColorPreset('#e67e22')"></div>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeColorPickerModal()">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmColorSelection()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmação de exclusão customizado -->
+    <div id="deleteConfirmModal" class="modal delete-confirm-modal" role="dialog" aria-labelledby="deleteConfirmTitle">
+        <div class="modal-content delete-confirm-content">
+            <div class="modal-header">
+                <h3 id="deleteConfirmTitle"><i class="fas fa-exclamation-triangle"></i> Confirmar Exclusão</h3>
+                <button class="close" onclick="closeDeleteConfirmModal()" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="delete-confirm-body">
+                <p id="deleteConfirmMessage">Tem certeza que deseja excluir este item? Esta ação não pode ser desfeita.</p>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeDeleteConfirmModal()">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDelete()"><i class="fas fa-trash"></i> Excluir</button>
+            </div>
+        </div>
+    </div>
+
+>>>>>>> e095f5d (Patch: erros de exclusão corrigdos)
     <script src="script.js"></script>
 </body>
 </html>
