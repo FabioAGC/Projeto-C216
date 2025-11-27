@@ -142,7 +142,13 @@ def create_category():
     )
     db.session.add(category)
     db.session.commit()
-    return jsonify({'id': category.id, 'message': 'Category created successfully'}), 201
+    return jsonify({
+        'id': category.id,
+        'name': category.name,
+        'color': category.color,
+        'created_at': category.created_at.isoformat(),
+        'message': 'Category created successfully'
+    }), 201
 
 @app.route('/categories/<int:category_id>', methods=['PUT'])
 def update_category(category_id):
@@ -214,6 +220,7 @@ def create_user():
     db.session.commit()
     return jsonify({'id': user.id, 'message': 'User created successfully'}), 201
 
+<<<<<<< HEAD
 # Rota para estatísticas
 @app.route('/stats', methods=['GET'])
 def get_stats():
@@ -251,6 +258,8 @@ def get_stats():
         'completion_rate': round(completion_rate, 2)
     })
 
+=======
+>>>>>>> e095f5d (Patch: erros de exclusão corrigdos)
 def wait_for_db():
     """Aguarda o banco de dados estar disponível"""
     max_retries = 30
