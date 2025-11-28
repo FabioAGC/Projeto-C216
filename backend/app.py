@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import time
 
@@ -48,6 +48,7 @@ class Task(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     status = db.Column(db.String(20), default='pending')  # pending, completed
+    kanban_status = db.Column(db.String(20), default='backlog')  # backlog, planejamento, andamento, concluido
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -69,6 +70,7 @@ def get_tasks():
         'title': task.title,
         'description': task.description,
         'status': task.status,
+        'kanban_status': task.kanban_status,
         'user_id': task.user_id,
         'created_at': task.created_at.isoformat(),
         'updated_at': task.updated_at.isoformat(),
@@ -83,6 +85,7 @@ def get_task(task_id):
         'title': task.title,
         'description': task.description,
         'status': task.status,
+        'kanban_status': task.kanban_status,
         'user_id': task.user_id,
         'created_at': task.created_at.isoformat(),
         'updated_at': task.updated_at.isoformat(),
@@ -110,6 +113,7 @@ def update_task(task_id):
     task.title = data.get('title', task.title)
     task.description = data.get('description', task.description)
     task.status = data.get('status', task.status)
+    task.kanban_status = data.get('kanban_status', task.kanban_status)
     task.updated_at = datetime.utcnow()
     
     db.session.commit()
@@ -202,6 +206,7 @@ def get_user_tasks(user_id):
         'title': task.title,
         'description': task.description,
         'status': task.status,
+        'kanban_status': task.kanban_status,
         'user_id': task.user_id,
         'created_at': task.created_at.isoformat(),
         'updated_at': task.updated_at.isoformat(),
@@ -219,6 +224,43 @@ def create_user():
     db.session.add(user)
     db.session.commit()
     return jsonify({'id': user.id, 'message': 'User created successfully'}), 201
+
+# Rota para estatísticas
+@app.route('/stats', methods=['GET'])
+def get_stats():
+    total_tasks = Task.query.count()
+    pending_tasks = Task.query.filter_by(status='pending').count()
+    completed_tasks = Task.query.filter_by(status='completed').count()
+    total_categories = Category.query.count()
+    
+    # Estatísticas por categoria
+    categories_stats = []
+    categories = Category.query.all()
+    for category in categories:
+        task_count = len(category.tasks)
+        categories_stats.append({
+            'id': category.id,
+            'name': category.name,
+            'color': category.color,
+            'task_count': task_count
+        })
+    
+    # Tarefas criadas nos últimos 7 dias
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    recent_tasks = Task.query.filter(Task.created_at >= seven_days_ago).count()
+    
+    # Taxa de conclusão
+    completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+    
+    return jsonify({
+        'total_tasks': total_tasks,
+        'pending_tasks': pending_tasks,
+        'completed_tasks': completed_tasks,
+        'total_categories': total_categories,
+        'categories_stats': categories_stats,
+        'recent_tasks': recent_tasks,
+        'completion_rate': round(completion_rate, 2)
+    })
 
 def wait_for_db():
     """Aguarda o banco de dados estar disponível"""

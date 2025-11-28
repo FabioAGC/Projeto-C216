@@ -63,7 +63,8 @@ CREATE TABLE tasks (
     id SERIAL PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
     description TEXT,
-    status VARCHAR(20) DEFAULT 'pending',
+  status VARCHAR(20) DEFAULT 'pending',
+  kanban_status VARCHAR(20) DEFAULT 'backlog', -- valores: backlog, planejamento, andamento, concluido
     user_id INTEGER REFERENCES users(id),
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
@@ -98,6 +99,8 @@ CREATE TABLE task_categories (
 - `PUT /tasks/{id}` - Atualizar tarefa
 - `DELETE /tasks/{id}` - Excluir tarefa
 
+Nota: `PUT /tasks/{id}` aceita também o campo `kanban_status` para atualizar a posição da tarefa no quadro Kanban.
+
 ### Endpoints de Categorias
 - `GET /categories` - Listar todas as categorias
 - `POST /categories` - Criar nova categoria
@@ -111,6 +114,9 @@ CREATE TABLE task_categories (
 ### Endpoints de Usuários
 - `GET /users/{userId}/tasks` - Tarefas do usuário
 - `POST /users` - Criar usuário
+
+### Endpoint de Estatísticas
+- `GET /stats` - Retorna estatísticas agregadas (total de tarefas, pendentes, concluídas, estatísticas por categoria e taxa de conclusão)
 
 ## Fluxo de Dados
 

@@ -21,6 +21,12 @@
                     <button class="nav-btn" data-page="categories">
                         <i class="fas fa-tags"></i> Categorias
                     </button>
+                    <button class="nav-btn" data-page="stats">
+                        <i class="fas fa-chart-bar"></i> Estatísticas
+                    </button>
+                    <button class="nav-btn" data-page="kanban">
+                        <i class="fas fa-columns"></i> Kanban
+                    </button>
                 </nav>
                 <button id="theme-toggle" class="theme-toggle-btn" aria-label="Alternar tema">
                     <i class="fas fa-moon"></i>
@@ -65,6 +71,82 @@
             <div id="categoriesList" class="categories-list">
                 <div class="loader-container">
                     <div class="loader"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="stats" class="page">
+            <div class="page-header">
+                <h2>Estatísticas e Relatórios</h2>
+                <button class="btn btn-primary" onclick="loadStats()">
+                    <i class="fas fa-sync-alt"></i> Atualizar
+                </button>
+            </div>
+
+            <div id="statsContent" class="stats-container">
+                <div class="loader-container">
+                    <div class="loader"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Audio tab removed -->
+
+        <section id="kanban" class="page">
+            <div class="page-header">
+                <h2>Quadro Kanban</h2>
+                <button class="btn btn-primary" onclick="showAddTaskModal()">
+                    <i class="fas fa-plus"></i> Nova Tarefa
+                </button>
+            </div>
+
+                <div id="kanbanBoard" class="kanban-board">
+                <div class="kanban-column" data-status="backlog">
+                    <div class="kanban-column-header">
+                        <h3>Backlog</h3>
+                        <span class="kanban-count" id="backlog-count">0</span>
+                    </div>
+                    <div class="kanban-column-content" data-status="backlog" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                        <div class="loader-container">
+                            <div class="loader"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kanban-column" data-status="planejamento">
+                    <div class="kanban-column-header">
+                        <h3>Planejamento</h3>
+                        <span class="kanban-count" id="planejamento-count">0</span>
+                    </div>
+                    <div class="kanban-column-content" data-status="planejamento" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                        <div class="loader-container">
+                            <div class="loader"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kanban-column" data-status="andamento">
+                    <div class="kanban-column-header">
+                        <h3>Em Andamento</h3>
+                        <span class="kanban-count" id="andamento-count">0</span>
+                    </div>
+                    <div class="kanban-column-content" data-status="andamento" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                        <div class="loader-container">
+                            <div class="loader"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kanban-column" data-status="concluido">
+                    <div class="kanban-column-header">
+                        <h3>Concluído</h3>
+                        <span class="kanban-count" id="concluido-count">0</span>
+                    </div>
+                    <div class="kanban-column-content" data-status="concluido" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                        <div class="loader-container">
+                            <div class="loader"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -243,6 +325,6 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script-novo.js"></script>
 </body>
 </html>

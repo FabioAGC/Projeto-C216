@@ -10,6 +10,11 @@ Uma aplicação web completa para gerenciamento de tarefas pessoais, desenvolvid
 - Botões para marcar uma tarefa como "concluída", "editar" ou "deletar"
 - Filtro para visualizar tarefas por categoria ou status
 
+### Quadro Kanban
+- Quadro Kanban com 4 colunas (Backlog, Planejamento, Em Andamento, Concluído)
+- Arraste e solte cards entre colunas; suporte a movimento lateral (cards dispostos horizontalmente dentro de cada coluna)
+- Campo `kanban_status` para representar o status no quadro
+
 ### Página de Detalhes e Edição de Tarefa
 - Formulário pré-preenchido com as informações da tarefa selecionada
 - Opção para alterar o status e associar/desassociar categorias
@@ -59,6 +64,8 @@ Uma aplicação web completa para gerenciamento de tarefas pessoais, desenvolvid
 - `POST /tasks` - Criar uma nova tarefa
 - `PUT /tasks/{id}` - Atualizar uma tarefa existente
 - `DELETE /tasks/{id}` - Excluir uma tarefa
+  
+Observação: as tarefas agora retornam o campo adicional `kanban_status` (valores: `backlog`, `planejamento`, `andamento`, `concluido`). Use `PUT /tasks/{id}` para atualizar tanto `status` quanto `kanban_status`.
 
 ### Categorias (Categories)
 - `GET /categories` - Listar todas as categorias
@@ -73,6 +80,9 @@ Uma aplicação web completa para gerenciamento de tarefas pessoais, desenvolvid
 ### Usuários
 - `GET /users/{userId}/tasks` - Listar todas as tarefas de um usuário específico
 - `POST /users` - Criar um novo usuário
+
+### Estatísticas
+- `GET /stats` - Retorna estatísticas agregadas (total de tarefas, tarefas pendentes/concluídas, categorias e taxa de conclusão)
 
 ## 🗄️ Estrutura do Banco de Dados
 
@@ -110,9 +120,9 @@ C216/
 │   ├── requirements.txt    # Dependências Python
 │   └── Dockerfile         # Imagem Docker do backend
 ├── frontend/
-│   ├── index.html         # Página principal
-│   ├── styles.css         # Estilos CSS
-│   ├── script.js          # JavaScript da aplicação
+│   ├── index.html         # Página principal (inclui aba Kanban)
+│   ├── styles.css         # Estilos CSS (inclui estilos do Kanban)
+│   ├── script-novo.js     # JavaScript da aplicação (contém Kanban, gravação de áudio, color picker)
 │   └── Dockerfile         # Imagem Docker do frontend
 ├── database/              # Scripts de banco (se necessário)
 ├── docker-compose.yml     # Orquestração dos serviços

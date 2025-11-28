@@ -34,6 +34,12 @@
    - Editar tarefa
    - Excluir tarefa
 
+#### Quadro Kanban
+1. Clique na aba "Kanban"
+2. Você verá 4 colunas: Backlog, Planejamento, Em Andamento e Concluído
+3. Arraste um card lateralmente (movimento horizontal dentro da coluna) e solte em outra coluna para atualizar o status Kanban
+4. O backend persiste o campo `kanban_status` para cada tarefa
+
 ### 3. Teste a API Diretamente
 
 #### Criar uma tarefa via API
@@ -46,6 +52,13 @@ curl -X POST http://localhost:5000/tasks \
     "status": "pending",
     "user_id": 1
   }'
+```
+
+#### Atualizar o status Kanban via API
+```bash
+curl -X PUT http://localhost:5000/tasks/1 \
+  -H "Content-Type: application/json" \
+  -d '{"kanban_status": "andamento"}'
 ```
 
 #### Listar todas as tarefas

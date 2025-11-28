@@ -23,6 +23,7 @@ const dom = {
     pages: document.querySelectorAll('.page'),
     navButtons: document.querySelectorAll('.nav-btn'),
     themeToggleButton: document.getElementById('theme-toggle'),
+    statsContent: document.getElementById('statsContent'),
 };
 
 // Inicialização da aplicação
@@ -30,7 +31,13 @@ document.addEventListener('DOMContentLoaded', initializeApp);
 
 async function initializeApp() {
     loadTheme(); // Carrega o tema salvo ou preferencial
-    setupEventListeners();
+    try {
+        setupEventListeners();
+    } catch (err) {
+        // Fallback: garantir que os handlers de navegação sejam ligados
+        console.error('setupEventListeners falhou:', err);
+        ensureNavHandlers();
+    }
     await loadInitialData();
 }
 
@@ -157,7 +164,14 @@ function updateCategoryUI() {
 function setupEventListeners() {
     // Navegação
     dom.navButtons.forEach(btn => {
-        btn.addEventListener('click', () => showPage(btn.getAttribute('data-page')));
+        btn.addEventListener('click', () => {
+            const pageName = btn.getAttribute('data-page');
+            showPage(pageName);
+            // Carregar estatísticas quando a página for exibida
+            if (pageName === 'stats') {
+                if (typeof loadStats === 'function') loadStats();
+            }
+        });
     });
 
     // Submissão de formulários
@@ -201,15 +215,8 @@ async function apiRequest(endpoint, method = 'GET', body = null) {
         }
         const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
         if (!response.ok) {
-            let errorMessage = `Erro HTTP: ${response.status}`;
-            try {
-                const errorData = await response.json();
-                errorMessage = errorData.message || errorMessage;
-            } catch (e) {
-                const text = await response.text();
-                if (text) errorMessage = text;
-            }
-            throw new Error(errorMessage);
+            const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
+            throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
         }
         return response.status === 204 ? null : await response.json();
     } catch (error) {
@@ -226,6 +233,9 @@ async function loadTasks() {
     } finally {
         state.isLoading.tasks = false;
         renderTasks();
+        if (document.getElementById('kanban').classList.contains('active')) {
+            renderKanban();
+        }
     }
 }
 
@@ -265,6 +275,9 @@ async function handleAddTask(e) {
         state.tasks.push(fullNewTask);
         
         renderTasks();
+        if (document.getElementById('kanban').classList.contains('active')) {
+            renderKanban();
+        }
         closeModal('addTaskModal');
         showNotification('Tarefa criada com sucesso!', 'success');
     } catch (error) {
@@ -298,6 +311,9 @@ async function handleEditTask(e) {
         }
         
         renderTasks();
+        if (document.getElementById('kanban').classList.contains('active')) {
+            renderKanban();
+        }
         closeModal('editTaskModal');
         showNotification('Tarefa atualizada com sucesso!', 'success');
     } catch (error) {
@@ -361,6 +377,9 @@ window.toggleTaskStatus = async function(taskId) {
         await apiRequest(`/tasks/${taskId}`, 'PUT', { status: newStatus });
         task.status = newStatus;
         renderTasks();
+        if (document.getElementById('kanban').classList.contains('active')) {
+            renderKanban();
+        }
         showNotification(`Tarefa marcada como ${newStatus === 'completed' ? 'concluída' : 'pendente'}.`, 'success');
     } catch (error) {
         console.error('Falha ao alterar status:', error);
@@ -374,6 +393,9 @@ window.deleteTask = async function(taskId) {
         await apiRequest(`/tasks/${taskId}`, 'DELETE');
         state.tasks = state.tasks.filter(t => t.id !== taskId);
         renderTasks();
+        if (document.getElementById('kanban').classList.contains('active')) {
+            renderKanban();
+        }
         showNotification('Tarefa excluída com sucesso!', 'success');
     } catch (error) {
         console.error('Falha ao excluir tarefa:', error);
@@ -381,21 +403,18 @@ window.deleteTask = async function(taskId) {
 };
 
 window.deleteCategory = async function(categoryId) {
-    showDeleteConfirm(
-        'Tem certeza que deseja excluir esta categoria? Esta ação não pode ser desfeita.',
-        async () => {
-            try {
-                await apiRequest(`/categories/${categoryId}`, 'DELETE');
-                state.categories = state.categories.filter(c => c.id !== categoryId);
-                renderCategories();
-                updateCategoryUI();
-                await loadTasks();
-                showNotification('Categoria excluída com sucesso!', 'success');
-            } catch (error) {
-                console.error('Falha ao excluir categoria:', error);
-            }
-        }
-    );
+    if (!confirm('Tem certeza que deseja excluir esta categoria? Esta ação não pode ser desfeita.')) return;
+    
+    try {
+        await apiRequest(`/categories/${categoryId}`, 'DELETE');
+        state.categories = state.categories.filter(c => c.id !== categoryId);
+        renderCategories();
+        updateCategoryUI();
+        await loadTasks(); // As tarefas associadas podem ter mudado
+        showNotification('Categoria excluída com sucesso!', 'success');
+    } catch (error) {
+        console.error('Falha ao excluir categoria:', error);
+    }
 };
 
 window.editTask = function(taskId) {
@@ -434,8 +453,41 @@ window.editCategory = function(categoryId) {
 // ---- Funções Utilitárias ---- //
 
 function showPage(pageName) {
-    dom.pages.forEach(page => page.classList.toggle('active', page.id === pageName));
-    dom.navButtons.forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-page') === pageName));
+    // Tentar usar as referências cached, mas garantir fallback caso estejam vazias
+    const pages = (dom.pages && dom.pages.length) ? dom.pages : document.querySelectorAll('.page');
+    const navButtons = (dom.navButtons && dom.navButtons.length) ? dom.navButtons : document.querySelectorAll('.nav-btn');
+
+    pages.forEach(page => {
+        const isActive = page.id === pageName;
+        page.classList.toggle('active', isActive);
+        // também ajustar estilo diretamente para garantir visibilidade
+        page.style.display = isActive ? 'block' : 'none';
+    });
+
+    navButtons.forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-page') === pageName));
+
+    // Renderizar kanban quando a página for exibida
+    if (pageName === 'kanban') {
+        if (typeof renderKanban === 'function') renderKanban();
+    }
+    if (pageName === 'stats') {
+        if (typeof loadStats === 'function') loadStats();
+    }
+}
+
+// Fallback para ligar handlers de navegação caso setupEventListeners falhe
+function ensureNavHandlers() {
+    const navButtons = document.querySelectorAll('.nav-btn');
+    navButtons.forEach(btn => {
+        btn.removeEventListener('click', navButtonClickHandler);
+        btn.addEventListener('click', navButtonClickHandler);
+    });
+}
+
+function navButtonClickHandler(event) {
+    const btn = event.currentTarget || event.target;
+    const pageName = btn.getAttribute('data-page');
+    showPage(pageName);
 }
 
 window.filterTasks = renderTasks;
@@ -479,13 +531,162 @@ window.closeModal = function(modalId) {
 };
 
 window.showAddTaskModal = () => openModal('addTaskModal');
-window.showAddCategoryModal = () => {
-    // Resetar cores para o padrão
-    document.getElementById('categoryColor').value = '#3498db';
-    document.getElementById('categoryColorValue').textContent = '#3498db';
-    document.querySelector('#addCategoryModal .color-preview').style.backgroundColor = '#3498db';
-    openModal('addCategoryModal');
+window.showAddCategoryModal = () => openModal('addCategoryModal');
+
+// ---- Funções de Estatísticas ---- //
+
+window.loadStats = async function() {
+    dom.statsContent.innerHTML = '<div class="loader-container"><div class="loader"></div></div>';
+    
+    try {
+        const stats = await apiRequest('/stats');
+        renderStats(stats);
+    } catch (error) {
+        console.error('Erro ao carregar estatísticas:', error);
+        dom.statsContent.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Erro ao carregar estatísticas</h3>
+                <p>${escapeHtml(error.message)}</p>
+            </div>`;
+    }
 };
+
+function renderStats(stats) {
+    const totalTasks = stats.total_tasks || 0;
+    const pendingTasks = stats.pending_tasks || 0;
+    const completedTasks = stats.completed_tasks || 0;
+    const completionRate = stats.completion_rate || 0;
+    const recentTasks = stats.recent_tasks || 0;
+    const totalCategories = stats.total_categories || 0;
+    const categoriesStats = stats.categories_stats || [];
+
+    // Calcular porcentagens para o gráfico
+    const pendingPercent = totalTasks > 0 ? (pendingTasks / totalTasks * 100) : 0;
+    const completedPercent = totalTasks > 0 ? (completedTasks / totalTasks * 100) : 0;
+
+    dom.statsContent.innerHTML = `
+        <div class="stats-grid">
+            <!-- Cards de Resumo -->
+            <div class="stat-card stat-card-primary">
+                <div class="stat-icon">
+                    <i class="fas fa-tasks"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 class="stat-value">${totalTasks}</h3>
+                    <p class="stat-label">Total de Tarefas</p>
+                </div>
+            </div>
+
+            <div class="stat-card stat-card-warning">
+                <div class="stat-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 class="stat-value">${pendingTasks}</h3>
+                    <p class="stat-label">Tarefas Pendentes</p>
+                </div>
+            </div>
+
+            <div class="stat-card stat-card-success">
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 class="stat-value">${completedTasks}</h3>
+                    <p class="stat-label">Tarefas Concluídas</p>
+                </div>
+            </div>
+
+            <div class="stat-card stat-card-info">
+                <div class="stat-icon">
+                    <i class="fas fa-percentage"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 class="stat-value">${completionRate}%</h3>
+                    <p class="stat-label">Taxa de Conclusão</p>
+                </div>
+            </div>
+
+            <div class="stat-card stat-card-secondary">
+                <div class="stat-icon">
+                    <i class="fas fa-tags"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 class="stat-value">${totalCategories}</h3>
+                    <p class="stat-label">Total de Categorias</p>
+                </div>
+            </div>
+
+            <div class="stat-card stat-card-recent">
+                <div class="stat-icon">
+                    <i class="fas fa-calendar-week"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 class="stat-value">${recentTasks}</h3>
+                    <p class="stat-label">Tarefas (7 dias)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico de Status -->
+        <div class="stats-chart-section">
+            <h3 class="chart-title">
+                <i class="fas fa-chart-pie"></i> Distribuição de Tarefas por Status
+            </h3>
+            <div class="chart-container">
+                <div class="progress-chart">
+                    <div class="progress-bar-wrapper">
+                        <div class="progress-bar" style="width: 100%; background: linear-gradient(90deg, 
+                            var(--warning-color) ${pendingPercent}%, 
+                            var(--success-color) ${pendingPercent}% ${pendingPercent + completedPercent}%, 
+                            transparent ${pendingPercent + completedPercent}%);">
+                        </div>
+                    </div>
+                    <div class="chart-legend">
+                        <div class="legend-item">
+                            <span class="legend-color" style="background-color: var(--warning-color);"></span>
+                            <span>Pendentes: ${pendingTasks} (${pendingPercent.toFixed(1)}%)</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background-color: var(--success-color);"></span>
+                            <span>Concluídas: ${completedTasks} (${completedPercent.toFixed(1)}%)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estatísticas por Categoria -->
+        <div class="stats-chart-section">
+            <h3 class="chart-title">
+                <i class="fas fa-chart-bar"></i> Tarefas por Categoria
+            </h3>
+            <div class="categories-stats-list">
+                ${categoriesStats.length > 0 ? categoriesStats.map(cat => {
+                    const maxCount = Math.max(...categoriesStats.map(c => c.task_count), 1);
+                    const percentage = maxCount > 0 ? (cat.task_count / maxCount * 100) : 0;
+                    return `
+                        <div class="category-stat-item">
+                            <div class="category-stat-header">
+                                <div class="category-stat-name">
+                                    <span class="category-stat-color" style="background-color: ${cat.color};"></span>
+                                    <span>${escapeHtml(cat.name)}</span>
+                                </div>
+                                <span class="category-stat-count">${cat.task_count} tarefa(s)</span>
+                            </div>
+                            <div class="category-stat-bar">
+                                <div class="category-stat-bar-fill" 
+                                     style="width: ${percentage}%; background-color: ${cat.color};">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('') : '<p class="no-data">Nenhuma categoria com tarefas encontrada.</p>'}
+            </div>
+        </div>
+    `;
+}
 
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
@@ -537,6 +738,8 @@ function loadTheme() {
         applyTheme('light');
     }
 }
+
+// Áudio removido — a aba/feature de gravação foi descontinuada
 
 // ---- Funções de Color Picker Customizado ---- //
 
@@ -638,3 +841,157 @@ window.closeDeleteConfirmModal = function() {
     closeModal('deleteConfirmModal');
     pendingDeleteCallback = null;
 };
+
+// ========== KANBAN FUNCTIONS ==========
+
+let draggedCard = null;
+
+function renderKanban() {
+    const kanbanColumns = {
+        'backlog': document.querySelector('.kanban-column-content[data-status="backlog"]'),
+        'planejamento': document.querySelector('.kanban-column-content[data-status="planejamento"]'),
+        'andamento': document.querySelector('.kanban-column-content[data-status="andamento"]'),
+        'concluido': document.querySelector('.kanban-column-content[data-status="concluido"]')
+    };
+
+    // Agrupar tarefas por status kanban
+    const tasksByStatus = {
+        'backlog': [],
+        'planejamento': [],
+        'andamento': [],
+        'concluido': []
+    };
+
+    // Normaliza status que podem vir de versões antigas ou do campo `status`
+    function normalizeStatus(s) {
+        if (!s) return 'backlog';
+        const v = s.toString().toLowerCase();
+        const map = {
+            'pending': 'backlog',
+            'pending': 'backlog',
+            'backlog': 'backlog',
+            'planning': 'planejamento',
+            'planejamento': 'planejamento',
+            'progress': 'andamento',
+            'andamento': 'andamento',
+            'completed': 'concluido',
+            'concluido': 'concluido'
+        };
+        return map[v] || (v === 'completed' ? 'concluido' : (map[v] || 'backlog'));
+    }
+
+    state.tasks.forEach(task => {
+        const raw = task.kanban_status || task.status || 'backlog';
+        const status = normalizeStatus(raw);
+        if (!tasksByStatus[status]) tasksByStatus['backlog'].push(task);
+        else tasksByStatus[status].push(task);
+    });
+
+    // Renderizar cada coluna
+    Object.keys(kanbanColumns).forEach(status => {
+        const column = kanbanColumns[status];
+        const tasks = tasksByStatus[status];
+
+        // Atualizar contadores
+        const countElement = document.getElementById(`${status}-count`);
+        if (countElement) countElement.textContent = tasks.length;
+
+        if (tasks.length === 0) {
+            column.innerHTML = `
+                <div class="kanban-empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <p>Nenhuma tarefa</p>
+                </div>
+            `;
+        } else {
+            column.innerHTML = tasks.map(task => `
+                <div class="kanban-card" draggable="true" data-task-id="${task.id}" ondragstart="startDrag(event)" ondragend="endDrag(event)">
+                    <div class="kanban-card-title">${escapeHtml(task.title)}</div>
+                    ${task.description ? `<div class="kanban-card-description">${escapeHtml(task.description)}</div>` : ''}
+                    ${task.categories.length > 0 ? `
+                        <div class="kanban-card-categories">
+                            ${task.categories.map(cat => `
+                                <span class="kanban-card-category-tag" style="background-color: ${cat.color};">${escapeHtml(cat.name)}</span>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    <div class="kanban-card-actions">
+                        <button class="edit-btn" onclick="editTask(${task.id})"><i class="fas fa-edit"></i></button>
+                        <button class="delete-btn" onclick="deleteTask(${task.id})"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+    });
+}
+
+function startDrag(event) {
+    draggedCard = event.target.closest('.kanban-card');
+    draggedCard.classList.add('dragging');
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/html', draggedCard.innerHTML);
+}
+
+function endDrag(event) {
+    draggedCard.classList.remove('dragging');
+    draggedCard = null;
+}
+
+function handleDragOver(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    const column = event.currentTarget;
+    column.classList.add('drag-over');
+}
+
+function handleDragLeave(event) {
+    if (event.currentTarget === event.target) {
+        event.currentTarget.classList.remove('drag-over');
+    }
+}
+
+function handleDrop(event) {
+    event.preventDefault();
+    const column = event.currentTarget;
+    column.classList.remove('drag-over');
+
+    if (draggedCard) {
+        const taskId = parseInt(draggedCard.getAttribute('data-task-id'));
+        const newStatus = column.getAttribute('data-status');
+
+        // Atualizar status no backend
+        updateTaskKanbanStatus(taskId, newStatus);
+
+        // Mover card visualmente
+        column.appendChild(draggedCard);
+    }
+}
+
+async function updateTaskKanbanStatus(taskId, newStatus) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                kanban_status: newStatus
+            })
+        });
+
+        if (!response.ok) throw new Error('Falha ao atualizar status');
+
+        // Atualizar estado local
+        const task = state.tasks.find(t => t.id === taskId);
+        if (task) {
+            task.kanban_status = newStatus;
+        }
+
+        renderKanban();
+        showNotification('Tarefa movida com sucesso!', 'success');
+    } catch (error) {
+        console.error('Erro ao atualizar tarefa:', error);
+        showNotification('Erro ao mover tarefa', 'error');
+        renderKanban(); // Re-renderizar para desfazer movimento visual
+    }
+}
