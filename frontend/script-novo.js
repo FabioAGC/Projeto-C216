@@ -12,33 +12,24 @@ const state = {
     }
 };
 
-// Elementos do DOM - será preenchido no initializeApp
-let dom = {};
+// Elementos do DOM
+const dom = {
+    tasksList: document.getElementById('tasksList'),
+    categoriesList: document.getElementById('categoriesList'),
+    categoryFilter: document.getElementById('categoryFilter'),
+    taskCategoriesCheckboxes: document.getElementById('taskCategories'),
+    editTaskCategoriesCheckboxes: document.getElementById('editTaskCategories'),
+    notificationContainer: document.getElementById('notification-container'),
+    pages: document.querySelectorAll('.page'),
+    navButtons: document.querySelectorAll('.nav-btn'),
+    themeToggleButton: document.getElementById('theme-toggle'),
+    statsContent: document.getElementById('statsContent'),
+};
 
 // Inicialização da aplicação
 document.addEventListener('DOMContentLoaded', initializeApp);
 
 async function initializeApp() {
-    // Inicializar referências do DOM após carregamento completo
-    dom = {
-        tasksList: document.getElementById('tasksList'),
-        categoriesList: document.getElementById('categoriesList'),
-        categoryFilter: document.getElementById('categoryFilter'),
-        taskCategoriesCheckboxes: document.getElementById('taskCategories'),
-        editTaskCategoriesCheckboxes: document.getElementById('editTaskCategories'),
-        notificationContainer: document.getElementById('notification-container'),
-        pages: document.querySelectorAll('.page'),
-        navButtons: document.querySelectorAll('.nav-btn'),
-        themeToggleButton: document.getElementById('theme-toggle'),
-        statsContent: document.getElementById('statsContent'),
-    };
-    
-    // Verificar se os elementos críticos existem
-    if (!dom.tasksList || !dom.navButtons || !dom.themeToggleButton) {
-        console.error('Elementos críticos do DOM não encontrados');
-        return;
-    }
-    
     loadTheme(); // Carrega o tema salvo ou preferencial
     setupEventListeners();
     await loadInitialData();
@@ -51,11 +42,8 @@ async function loadInitialData() {
 // ---- Funções de Renderização e UI ---- //
 
 function renderTasks() {
-    if (!dom.tasksList) return;
-    
-    const statusFilterEl = document.getElementById('statusFilter');
-    const statusFilter = statusFilterEl ? statusFilterEl.value : '';
-    const categoryFilter = dom.categoryFilter ? dom.categoryFilter.value : '';
+    const statusFilter = document.getElementById('statusFilter').value;
+    const categoryFilter = dom.categoryFilter.value;
 
     let filteredTasks = [...state.tasks];
     if (statusFilter) {
@@ -63,7 +51,7 @@ function renderTasks() {
     }
     if (categoryFilter) {
         filteredTasks = filteredTasks.filter(task => 
-            task.categories && task.categories.some(cat => cat.id.toString() === categoryFilter)
+            task.categories.some(cat => cat.id.toString() === categoryFilter)
         );
     }
 
@@ -86,7 +74,7 @@ function renderTasks() {
         <div class="task-card ${task.status}">
             <div class="task-title">${escapeHtml(task.title)}</div>
             ${task.description ? `<div class="task-description">${escapeHtml(task.description)}</div>` : ''}
-            ${task.categories && task.categories.length > 0 ? `
+            ${task.categories.length > 0 ? `
                 <div class="task-categories">
                     ${task.categories.map(cat => `
                         <span class="category-tag" style="background-color: ${cat.color};">${escapeHtml(cat.name)}</span>
@@ -94,7 +82,7 @@ function renderTasks() {
                 </div>` : ''}
             <div class="task-actions">
                 <button class="btn btn-success" onclick="toggleTaskStatus(${task.id})">
-                    <i class="fas fa-${task.status === 'completed' ? 'undo' : 'check'}"></i> ${task.status === 'backlog' ? 'Iniciar' : task.status === 'pending' ? 'Em Andamento' : task.status === 'andamento' ? 'Concluir' : 'Reabrir'}
+                    <i class="fas fa-${task.status === 'pending' ? 'check' : 'undo'}"></i> ${task.status === 'pending' ? 'Concluir' : 'Reabrir'}
                 </button>
                 <button class="btn btn-warning" onclick="editTask(${task.id})"><i class="fas fa-edit"></i> Editar</button>
                 <button class="btn btn-danger" onclick="deleteTask(${task.id})"><i class="fas fa-trash"></i> Excluir</button>
@@ -104,8 +92,6 @@ function renderTasks() {
 }
 
 function renderCategories() {
-    if (!dom.categoriesList) return;
-    
     if (state.isLoading.categories) {
         dom.categoriesList.innerHTML = `<div class="loader-container"><div class="loader"></div></div>`;
         return;
@@ -139,10 +125,8 @@ function renderCategories() {
 
 function updateCategoryUI() {
     // Atualizar filtro
-    if (dom.categoryFilter) {
-        dom.categoryFilter.innerHTML = '<option value="">Todas as categorias</option>' +
-            state.categories.map(cat => `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`).join('');
-    }
+    dom.categoryFilter.innerHTML = '<option value="">Todas as categorias</option>' +
+        state.categories.map(cat => `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`).join('');
 
     // Atualizar checkboxes nos modais
     const categoryHtml = state.categories.map(cat => `
@@ -164,8 +148,8 @@ function updateCategoryUI() {
         </div>
     `).join('');
     
-    if (dom.taskCategoriesCheckboxes) dom.taskCategoriesCheckboxes.innerHTML = categoryHtml;
-    if (dom.editTaskCategoriesCheckboxes) dom.editTaskCategoriesCheckboxes.innerHTML = editCategoryHtml;
+    dom.taskCategoriesCheckboxes.innerHTML = categoryHtml;
+    dom.editTaskCategoriesCheckboxes.innerHTML = editCategoryHtml;
 }
 
 
@@ -173,29 +157,22 @@ function updateCategoryUI() {
 
 function setupEventListeners() {
     // Navegação
-    if (dom.navButtons && dom.navButtons.length > 0) {
-        dom.navButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const pageName = btn.getAttribute('data-page');
-                showPage(pageName);
-                // Carregar estatísticas quando a página for exibida
-                if (pageName === 'stats') {
-                    if (typeof loadStats === 'function') loadStats();
-                }
-            });
+    dom.navButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const pageName = btn.getAttribute('data-page');
+            showPage(pageName);
+            // Carregar estatísticas quando a página for exibida
+            if (pageName === 'stats') {
+                if (typeof loadStats === 'function') loadStats();
+            }
         });
-    }
+    });
 
     // Submissão de formulários
-    const addTaskForm = document.getElementById('addTaskForm');
-    const editTaskForm = document.getElementById('editTaskForm');
-    const addCategoryForm = document.getElementById('addCategoryForm');
-    const editCategoryForm = document.getElementById('editCategoryForm');
-    
-    if (addTaskForm) addTaskForm.addEventListener('submit', handleAddTask);
-    if (editTaskForm) editTaskForm.addEventListener('submit', handleEditTask);
-    if (addCategoryForm) addCategoryForm.addEventListener('submit', handleAddCategory);
-    if (editCategoryForm) editCategoryForm.addEventListener('submit', handleEditCategory);
+    document.getElementById('addTaskForm').addEventListener('submit', handleAddTask);
+    document.getElementById('editTaskForm').addEventListener('submit', handleEditTask);
+    document.getElementById('addCategoryForm').addEventListener('submit', handleAddCategory);
+    document.getElementById('editCategoryForm').addEventListener('submit', handleEditCategory);
     
     // Atualizar color picker ao abrir modal
     const addCategoryColorPreview = document.querySelector('#addCategoryModal .color-preview');
@@ -215,9 +192,7 @@ function setupEventListeners() {
     });
 
     // Listener para o botão de tema
-    if (dom.themeToggleButton) {
-        dom.themeToggleButton.addEventListener('click', toggleTheme);
-    }
+    dom.themeToggleButton.addEventListener('click', toggleTheme);
 }
 
 
@@ -276,21 +251,10 @@ async function loadCategories() {
 async function handleAddTask(e) {
     e.preventDefault();
     const form = e.target;
-    const status = form.querySelector('#taskStatus').value;
-    
-    // Mapear status para kanban_status
-    const statusToKanban = {
-        'backlog': 'backlog',
-        'pending': 'planejamento',
-        'andamento': 'andamento',
-        'completed': 'concluido'
-    };
-    
     const taskData = {
         title: form.querySelector('#taskTitle').value,
         description: form.querySelector('#taskDescription').value,
-        status: status,
-        kanban_status: statusToKanban[status] || 'backlog',
+        status: form.querySelector('#taskStatus').value,
         user_id: 1 // Default user
     };
     
@@ -319,21 +283,10 @@ async function handleEditTask(e) {
     e.preventDefault();
     const form = e.target;
     const taskId = form.querySelector('#editTaskId').value;
-    const status = form.querySelector('#editTaskStatus').value;
-    
-    // Mapear status para kanban_status
-    const statusToKanban = {
-        'backlog': 'backlog',
-        'pending': 'planejamento',
-        'andamento': 'andamento',
-        'completed': 'concluido'
-    };
-    
     const taskData = {
         title: form.querySelector('#editTaskTitle').value,
         description: form.querySelector('#editTaskDescription').value,
-        status: status,
-        kanban_status: statusToKanban[status] || 'backlog'
+        status: form.querySelector('#editTaskStatus').value
     };
 
     try {
@@ -412,44 +365,16 @@ async function handleEditCategory(e) {
 window.toggleTaskStatus = async function(taskId) {
     const task = state.tasks.find(t => t.id === taskId);
     if (!task) return;
-    
-    // Ciclo de status: backlog -> pending -> andamento -> completed -> backlog
-    const statusCycle = {
-        'backlog': 'pending',
-        'pending': 'andamento',
-        'andamento': 'completed',
-        'completed': 'backlog'
-    };
-    
-    // Mapear status para kanban_status
-    const statusToKanban = {
-        'backlog': 'backlog',
-        'pending': 'planejamento',
-        'andamento': 'andamento',
-        'completed': 'concluido'
-    };
-    
-    const newStatus = statusCycle[task.status] || 'pending';
-    const newKanbanStatus = statusToKanban[newStatus] || 'backlog';
-    const statusLabels = {
-        'backlog': 'Backlog',
-        'pending': 'Pendente',
-        'andamento': 'Em Andamento',
-        'completed': 'Concluída'
-    };
+    const newStatus = task.status === 'pending' ? 'completed' : 'pending';
     
     try {
-        await apiRequest(`/tasks/${taskId}`, 'PUT', { 
-            status: newStatus,
-            kanban_status: newKanbanStatus
-        });
+        await apiRequest(`/tasks/${taskId}`, 'PUT', { status: newStatus });
         task.status = newStatus;
-        task.kanban_status = newKanbanStatus;
         renderTasks();
         if (document.getElementById('kanban').classList.contains('active')) {
             renderKanban();
         }
-        showNotification(`Tarefa movida para: ${statusLabels[newStatus]}`, 'success');
+        showNotification(`Tarefa marcada como ${newStatus === 'completed' ? 'concluída' : 'pendente'}.`, 'success');
     } catch (error) {
         console.error('Falha ao alterar status:', error);
     }
@@ -577,8 +502,6 @@ window.showAddCategoryModal = () => openModal('addCategoryModal');
 // ---- Funções de Estatísticas ---- //
 
 window.loadStats = async function() {
-    if (!dom.statsContent) return;
-    
     dom.statsContent.innerHTML = '<div class="loader-container"><div class="loader"></div></div>';
     
     try {
@@ -586,20 +509,16 @@ window.loadStats = async function() {
         renderStats(stats);
     } catch (error) {
         console.error('Erro ao carregar estatísticas:', error);
-        if (dom.statsContent) {
-            dom.statsContent.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <h3>Erro ao carregar estatísticas</h3>
-                    <p>${escapeHtml(error.message)}</p>
-                </div>`;
-        }
+        dom.statsContent.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Erro ao carregar estatísticas</h3>
+                <p>${escapeHtml(error.message)}</p>
+            </div>`;
     }
 };
 
 function renderStats(stats) {
-    if (!dom.statsContent) return;
-    
     const totalTasks = stats.total_tasks || 0;
     const pendingTasks = stats.pending_tasks || 0;
     const completedTasks = stats.completed_tasks || 0;
@@ -736,8 +655,6 @@ function renderStats(stats) {
 }
 
 function showNotification(message, type = 'info') {
-    if (!dom.notificationContainer) return;
-    
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.innerHTML = `
@@ -761,10 +678,10 @@ function escapeHtml(text) {
 function applyTheme(theme) {
     if (theme === 'dark') {
         document.body.classList.add('dark-mode');
-        if (dom.themeToggleButton) dom.themeToggleButton.innerHTML = '<i class="fas fa-sun"></i>'; // Ícone de Sol
+        dom.themeToggleButton.innerHTML = '<i class="fas fa-sun"></i>'; // Ícone de Sol
     } else {
         document.body.classList.remove('dark-mode');
-        if (dom.themeToggleButton) dom.themeToggleButton.innerHTML = '<i class="fas fa-moon"></i>'; // Ícone de Lua
+        dom.themeToggleButton.innerHTML = '<i class="fas fa-moon"></i>'; // Ícone de Lua
     }
     localStorage.setItem('theme', theme);
 }
@@ -787,6 +704,217 @@ function loadTheme() {
         applyTheme('light');
     }
 }
+
+// ---- Funções de Gravação de Áudio ---- //
+
+let mediaRecorder;
+let audioChunks = [];
+let recordedAudioBlob = null;
+let timerInterval;
+let seconds = 0;
+let isRecording = false;
+
+const WEBHOOK_URL = 'https://testessss.app.n8n.cloud/webhook/audio-to-transcribe';
+
+const audioElements = {
+    recordBtn: document.getElementById('record-btn'),
+    recordingStatus: document.getElementById('recording-status'),
+    timerEl: document.getElementById('timer'),
+    audioPlaybackContainer: document.getElementById('audio-playback-container'),
+    audioPlayer: document.getElementById('audio-player'),
+    reRecordBtn: document.getElementById('re-record-btn'),
+    submitAudioBtn: document.getElementById('submit-audio-btn'),
+    transcriptSection: document.getElementById('transcript-section'),
+    transcriptInput: document.getElementById('transcript-input'),
+    objectiveInput: document.getElementById('objective-input'),
+    transcribeAnotherBtn: document.getElementById('transcribe-another-btn'),
+    createTaskBtn: document.getElementById('create-task-from-audio-btn'),
+    loadingOverlay: document.getElementById('loading-overlay'),
+    loadingText: document.getElementById('loading-text'),
+};
+
+const formatTime = (time) => {
+    const minutes = Math.floor(time / 60).toString().padStart(2, '0');
+    const secs = Math.floor(time % 60).toString().padStart(2, '0');
+    return `${minutes}:${secs}`;
+};
+
+const showLoadingAudio = (message) => {
+    audioElements.loadingText.textContent = message;
+    audioElements.loadingOverlay.style.display = 'flex';
+};
+
+const hideLoadingAudio = () => {
+    audioElements.loadingOverlay.style.display = 'none';
+};
+
+const updateTimer = () => {
+    seconds++;
+    audioElements.timerEl.textContent = formatTime(seconds);
+};
+
+const resetRecordingState = () => {
+    isRecording = false;
+    clearInterval(timerInterval);
+    seconds = 0;
+    audioElements.timerEl.textContent = '00:00';
+    audioElements.recordBtn.textContent = '<i class="fas fa-circle"></i> Iniciar Gravação';
+    audioElements.recordBtn.classList.remove('btn-danger');
+    audioElements.recordBtn.classList.add('btn-primary');
+    audioElements.recordingStatus.textContent = 'Pressione para gravar';
+    audioElements.audioPlaybackContainer.style.display = 'none';
+    audioElements.recordBtn.style.display = 'block';
+    audioElements.transcriptInput.value = '';
+    audioElements.objectiveInput.value = '';
+};
+
+const showAudioSection = () => {
+    document.getElementById('audio-section').style.display = 'block';
+    document.getElementById('transcript-section').style.display = 'none';
+};
+
+const showTranscriptSection = () => {
+    document.getElementById('audio-section').style.display = 'none';
+    document.getElementById('transcript-section').style.display = 'block';
+};
+
+// Event Listeners para Áudio
+audioElements.recordBtn.addEventListener('click', async () => {
+    if (isRecording) {
+        mediaRecorder.stop();
+    } else if (audioElements.recordBtn.textContent.includes('Gravar Novamente')) {
+        resetRecordingState();
+        showAudioSection();
+    } else {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = (event) => {
+                audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                recordedAudioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const audioURL = URL.createObjectURL(recordedAudioBlob);
+                audioElements.audioPlayer.src = audioURL;
+                stream.getTracks().forEach(track => track.stop());
+
+                audioElements.recordBtn.style.display = 'none';
+                audioElements.recordingStatus.textContent = 'Gravação finalizada.';
+                audioElements.audioPlaybackContainer.style.display = 'block';
+                clearInterval(timerInterval);
+            };
+
+            mediaRecorder.start();
+            isRecording = true;
+            audioElements.recordBtn.textContent = '<i class="fas fa-stop"></i> Parar Gravação';
+            audioElements.recordBtn.classList.remove('btn-primary');
+            audioElements.recordBtn.classList.add('btn-danger');
+            audioElements.recordingStatus.textContent = 'Gravando...';
+            seconds = 0;
+            audioElements.timerEl.textContent = '00:00';
+            timerInterval = setInterval(updateTimer, 1000);
+        } catch (error) {
+            console.error('Erro ao acessar microfone:', error);
+            alert('Não foi possível acessar o microfone. Permita o acesso.');
+            audioElements.recordingStatus.textContent = 'Erro: Acesso ao microfone negado.';
+        }
+    }
+});
+
+audioElements.reRecordBtn.addEventListener('click', () => {
+    resetRecordingState();
+    showAudioSection();
+});
+
+audioElements.submitAudioBtn.addEventListener('click', async () => {
+    if (!recordedAudioBlob) {
+        alert('Por favor, grave o áudio primeiro.');
+        return;
+    }
+
+    showLoadingAudio('Transcrevendo áudio...');
+
+    const formData = new FormData();
+    formData.append('audio_file', recordedAudioBlob, 'audio.webm');
+    formData.append('objetivo', 'objetivo');
+
+    try {
+        const response = await fetch(WEBHOOK_URL, {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            throw new Error(`Erro HTTP! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log("Resposta do webhook:", result);
+
+        audioElements.transcriptInput.value = result.Transcript || 'Nenhuma transcrição recebida.';
+        showTranscriptSection();
+        
+        audioElements.audioPlaybackContainer.style.display = 'none';
+        audioElements.recordBtn.style.display = 'block'; 
+        audioElements.recordBtn.textContent = '<i class="fas fa-circle"></i> Gravar Novo Áudio'; 
+        audioElements.recordBtn.classList.remove('btn-danger');
+        audioElements.recordBtn.classList.add('btn-primary');
+        audioElements.recordingStatus.textContent = 'Áudio transcrito!';
+        audioElements.timerEl.textContent = '00:00';
+        
+    } catch (error) {
+        console.error('Erro ao enviar áudio para webhook:', error);
+        alert(`Falha na transcrição: ${error.message}`);
+        resetRecordingState();
+        showAudioSection();
+    } finally {
+        hideLoadingAudio();
+    }
+});
+
+audioElements.transcribeAnotherBtn.addEventListener('click', () => {
+    resetRecordingState();
+    showAudioSection();
+});
+
+audioElements.createTaskBtn.addEventListener('click', async () => {
+    const transcript = audioElements.transcriptInput.value.trim();
+    const objective = audioElements.objectiveInput.value.trim();
+
+    if (!transcript) {
+        alert('A transcrição não pode estar vazia.');
+        return;
+    }
+
+    if (!objective) {
+        alert('O objetivo não pode estar vazio.');
+        return;
+    }
+
+    try {
+        const taskData = {
+            title: objective,
+            description: transcript,
+            status: 'pending',
+            user_id: 1
+        };
+
+        const newTask = await apiRequest('/tasks', 'POST', taskData);
+        const fullNewTask = await apiRequest(`/tasks/${newTask.id}`);
+        state.tasks.push(fullNewTask);
+
+        renderTasks();
+        showNotification('Tarefa criada a partir da transcrição!', 'success');
+        resetRecordingState();
+        showAudioSection();
+        showPage('dashboard');
+    } catch (error) {
+        console.error('Erro ao criar tarefa:', error);
+    }
+});
 
 // ---- Funções de Color Picker Customizado ---- //
 
@@ -894,29 +1022,12 @@ window.closeDeleteConfirmModal = function() {
 let draggedCard = null;
 
 function renderKanban() {
-    const kanbanBoard = document.getElementById('kanbanBoard');
-    if (!kanbanBoard) {
-        console.error('Kanban board não encontrado');
-        return;
-    }
-    
-    // Garantir que o board está com display grid
-    kanbanBoard.style.display = 'grid';
-    kanbanBoard.style.gridTemplateColumns = 'repeat(4, 1fr)';
-    kanbanBoard.style.gap = '20px';
-    
     const kanbanColumns = {
         'backlog': document.querySelector('.kanban-column-content[data-status="backlog"]'),
         'planejamento': document.querySelector('.kanban-column-content[data-status="planejamento"]'),
         'andamento': document.querySelector('.kanban-column-content[data-status="andamento"]'),
         'concluido': document.querySelector('.kanban-column-content[data-status="concluido"]')
     };
-
-    // Verificar se as colunas existem
-    if (!kanbanColumns.backlog || !kanbanColumns.planejamento || !kanbanColumns.andamento || !kanbanColumns.concluido) {
-        console.error('Colunas do Kanban não encontradas');
-        return;
-    }
 
     // Agrupar tarefas por status kanban
     const tasksByStatus = {
@@ -928,17 +1039,13 @@ function renderKanban() {
 
     state.tasks.forEach(task => {
         const status = task.kanban_status || 'backlog';
-        if (tasksByStatus[status]) {
-            tasksByStatus[status].push(task);
-        }
+        tasksByStatus[status].push(task);
     });
 
     // Renderizar cada coluna
     Object.keys(kanbanColumns).forEach(status => {
         const column = kanbanColumns[status];
-        if (!column) return;
-        
-        const tasks = tasksByStatus[status] || [];
+        const tasks = tasksByStatus[status];
 
         // Atualizar contadores
         const countElement = document.getElementById(`${status}-count`);
@@ -954,14 +1061,9 @@ function renderKanban() {
         } else {
             column.innerHTML = tasks.map(task => `
                 <div class="kanban-card" draggable="true" data-task-id="${task.id}" ondragstart="startDrag(event)" ondragend="endDrag(event)">
-                    <div class="kanban-card-header">
-                        <div class="kanban-card-drag-handle">
-                            <i class="fas fa-grip-vertical"></i>
-                        </div>
-                        <div class="kanban-card-title">${escapeHtml(task.title)}</div>
-                    </div>
+                    <div class="kanban-card-title">${escapeHtml(task.title)}</div>
                     ${task.description ? `<div class="kanban-card-description">${escapeHtml(task.description)}</div>` : ''}
-                    ${task.categories && task.categories.length > 0 ? `
+                    ${task.categories.length > 0 ? `
                         <div class="kanban-card-categories">
                             ${task.categories.map(cat => `
                                 <span class="kanban-card-category-tag" style="background-color: ${cat.color};">${escapeHtml(cat.name)}</span>
@@ -969,12 +1071,8 @@ function renderKanban() {
                         </div>
                     ` : ''}
                     <div class="kanban-card-actions">
-                        <button class="edit-btn" onclick="editTask(${task.id})" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="delete-btn" onclick="deleteTask(${task.id})" title="Excluir">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        <button class="edit-btn" onclick="editTask(${task.id})"><i class="fas fa-edit"></i></button>
+                        <button class="delete-btn" onclick="deleteTask(${task.id})"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
             `).join('');
@@ -982,54 +1080,47 @@ function renderKanban() {
     });
 }
 
-window.startDrag = function(event) {
+function startDrag(event) {
     draggedCard = event.target.closest('.kanban-card');
-    if (!draggedCard) return;
-    
     draggedCard.classList.add('dragging');
     event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', draggedCard.getAttribute('data-task-id'));
-};
+    event.dataTransfer.setData('text/html', draggedCard.innerHTML);
+}
 
-window.endDrag = function(event) {
-    if (draggedCard) {
-        draggedCard.classList.remove('dragging');
-    }
+function endDrag(event) {
+    draggedCard.classList.remove('dragging');
     draggedCard = null;
-};
+}
 
-window.handleDragOver = function(event) {
+function handleDragOver(event) {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
     const column = event.currentTarget;
-    if (column) {
-        column.classList.add('drag-over');
-    }
-};
+    column.classList.add('drag-over');
+}
 
-window.handleDragLeave = function(event) {
+function handleDragLeave(event) {
     if (event.currentTarget === event.target) {
         event.currentTarget.classList.remove('drag-over');
     }
-};
+}
 
-window.handleDrop = function(event) {
+function handleDrop(event) {
     event.preventDefault();
     const column = event.currentTarget;
-    if (column) {
-        column.classList.remove('drag-over');
-    }
+    column.classList.remove('drag-over');
 
     if (draggedCard) {
         const taskId = parseInt(draggedCard.getAttribute('data-task-id'));
         const newStatus = column.getAttribute('data-status');
 
-        if (taskId && newStatus) {
-            // Atualizar status no backend
-            updateTaskKanbanStatus(taskId, newStatus);
-        }
+        // Atualizar status no backend
+        updateTaskKanbanStatus(taskId, newStatus);
+
+        // Mover card visualmente
+        column.appendChild(draggedCard);
     }
-};
+}
 
 async function updateTaskKanbanStatus(taskId, newStatus) {
     try {

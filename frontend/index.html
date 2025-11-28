@@ -24,8 +24,8 @@
                     <button class="nav-btn" data-page="stats">
                         <i class="fas fa-chart-bar"></i> Estatísticas
                     </button>
-                    <button class="nav-btn" data-page="audio-transcribe">
-                        <i class="fas fa-microphone"></i> Áudio
+                    <button class="nav-btn" data-page="kanban">
+                        <i class="fas fa-columns"></i> Kanban
                     </button>
                 </nav>
                 <button id="theme-toggle" class="theme-toggle-btn" aria-label="Alternar tema">
@@ -45,7 +45,9 @@
             <div class="filters">
                 <select id="statusFilter" onchange="filterTasks()" aria-label="Filtrar por status">
                     <option value="">Todas as tarefas</option>
+                    <option value="backlog">Backlog</option>
                     <option value="pending">Pendentes</option>
+                    <option value="andamento">Em Andamento</option>
                     <option value="completed">Concluídas</option>
                 </select>
                 <select id="categoryFilter" onchange="filterTasks()" aria-label="Filtrar por categoria">
@@ -90,59 +92,62 @@
             </div>
         </section>
 
-        <section id="audio-transcribe" class="page">
+        <section id="kanban" class="page">
             <div class="page-header">
-                <h2>Transcrição de Áudio</h2>
+                <h2>Quadro Kanban</h2>
+                <button class="btn btn-primary" onclick="showAddTaskModal()">
+                    <i class="fas fa-plus"></i> Nova Tarefa
+                </button>
             </div>
 
-            <!-- Audio Recording Section -->
-            <div id="audio-section" class="audio-container">
-                <div class="audio-controls">
-                    <button id="record-btn" class="btn btn-primary" style="padding: 12px 20px; font-size: 16px;">
-                        <i class="fas fa-circle"></i> Iniciar Gravação
-                    </button>
-                    <p id="recording-status" class="recording-status">Pressione para gravar</p>
-                    <p id="timer" class="recording-timer">00:00</p>
-                </div>
-
-                <!-- Audio Playback -->
-                <div id="audio-playback-container" class="hidden audio-playback" style="display: none;">
-                    <audio id="audio-player" controls style="width: 100%; margin: 20px 0;"></audio>
-                    <div class="audio-actions">
-                        <button id="re-record-btn" class="btn btn-secondary">
-                            <i class="fas fa-redo"></i> Gravar Novamente
-                        </button>
-                        <button id="submit-audio-btn" class="btn btn-success">
-                            <i class="fas fa-check"></i> Transcrever
-                        </button>
+            <div id="kanbanBoard" class="kanban-board" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+                <div class="kanban-column">
+                    <div class="kanban-column-header">
+                        <h3>Backlog</h3>
+                        <span class="kanban-count" id="backlog-count">0</span>
+                    </div>
+                    <div class="kanban-column-content" data-status="backlog" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                        <div class="loader-container">
+                            <div class="loader"></div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Transcript Display Section -->
-            <div id="transcript-section" class="transcript-container" style="display: none;">
-                <div class="form-group">
-                    <label for="transcript-input">Transcrição:</label>
-                    <textarea id="transcript-input" rows="6" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"></textarea>
+                <div class="kanban-column">
+                    <div class="kanban-column-header">
+                        <h3>Planejamento</h3>
+                        <span class="kanban-count" id="planejamento-count">0</span>
+                    </div>
+                    <div class="kanban-column-content" data-status="planejamento" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                        <div class="loader-container">
+                            <div class="loader"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="objective-input">Objetivo:</label>
-                    <input type="text" id="objective-input" placeholder="Digite o objetivo da tarefa" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                </div>
-                <div class="form-actions">
-                    <button id="create-task-from-audio-btn" class="btn btn-success">
-                        <i class="fas fa-plus"></i> Criar Tarefa
-                    </button>
-                    <button id="transcribe-another-btn" class="btn btn-primary">
-                        <i class="fas fa-microphone"></i> Gravar Outro Áudio
-                    </button>
-                </div>
-            </div>
 
-            <!-- Loading Overlay -->
-            <div id="loading-overlay" class="loading-overlay" style="display: none;">
-                <div class="spinner"></div>
-                <p id="loading-text">Processando...</p>
+                <div class="kanban-column">
+                    <div class="kanban-column-header">
+                        <h3>Em Andamento</h3>
+                        <span class="kanban-count" id="andamento-count">0</span>
+                    </div>
+                    <div class="kanban-column-content" data-status="andamento" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                        <div class="loader-container">
+                            <div class="loader"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kanban-column">
+                    <div class="kanban-column-header">
+                        <h3>Concluído</h3>
+                        <span class="kanban-count" id="concluido-count">0</span>
+                    </div>
+                    <div class="kanban-column-content" data-status="concluido" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                        <div class="loader-container">
+                            <div class="loader"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
     </div>
@@ -165,7 +170,9 @@
                 <div class="form-group">
                     <label for="taskStatus">Status:</label>
                     <select id="taskStatus">
+                        <option value="backlog">Backlog</option>
                         <option value="pending">Pendente</option>
+                        <option value="andamento">Em Andamento</option>
                         <option value="completed">Concluída</option>
                     </select>
                 </div>
@@ -201,7 +208,9 @@
                 <div class="form-group">
                     <label for="editTaskStatus">Status:</label>
                     <select id="editTaskStatus">
+                        <option value="backlog">Backlog</option>
                         <option value="pending">Pendente</option>
+                        <option value="andamento">Em Andamento</option>
                         <option value="completed">Concluída</option>
                     </select>
                 </div>
@@ -232,12 +241,8 @@
                 <div class="form-group">
                     <label for="categoryColor">Cor:</label>
                     <div class="color-picker-wrapper">
-<<<<<<< HEAD
-                        <input type="color" id="categoryColor" value="#3498db">
-=======
                         <input type="hidden" id="categoryColor" value="#3498db">
                         <div class="color-preview" style="background-color: #3498db" onclick="openColorPicker('categoryColor')"></div>
->>>>>>> e095f5d (Patch: erros de exclusão corrigdos)
                         <span id="categoryColorValue">#3498db</span>
                     </div>
                 </div>
@@ -264,12 +269,8 @@
                 <div class="form-group">
                     <label for="editCategoryColor">Cor:</label>
                      <div class="color-picker-wrapper">
-<<<<<<< HEAD
-                        <input type="color" id="editCategoryColor" value="#3498db">
-=======
                         <input type="hidden" id="editCategoryColor" value="#3498db">
                         <div class="color-preview" style="background-color: #3498db" onclick="openColorPicker('editCategoryColor')"></div>
->>>>>>> e095f5d (Patch: erros de exclusão corrigdos)
                         <span id="editCategoryColorValue">#3498db</span>
                     </div>
                 </div>
@@ -281,8 +282,6 @@
         </div>
     </div>
 
-<<<<<<< HEAD
-=======
     <!-- Modal de seleção de cor customizado -->
     <div id="colorPickerModal" class="modal color-picker-modal" role="dialog" aria-labelledby="colorPickerTitle">
         <div class="modal-content color-picker-content">
@@ -330,7 +329,6 @@
         </div>
     </div>
 
->>>>>>> e095f5d (Patch: erros de exclusão corrigdos)
     <script src="script.js"></script>
 </body>
 </html>

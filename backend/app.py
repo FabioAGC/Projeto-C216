@@ -48,6 +48,7 @@ class Task(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     status = db.Column(db.String(20), default='pending')  # pending, completed
+    kanban_status = db.Column(db.String(20), default='backlog')  # backlog, planejamento, andamento, concluido
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -69,6 +70,7 @@ def get_tasks():
         'title': task.title,
         'description': task.description,
         'status': task.status,
+        'kanban_status': task.kanban_status,
         'user_id': task.user_id,
         'created_at': task.created_at.isoformat(),
         'updated_at': task.updated_at.isoformat(),
@@ -83,6 +85,7 @@ def get_task(task_id):
         'title': task.title,
         'description': task.description,
         'status': task.status,
+        'kanban_status': task.kanban_status,
         'user_id': task.user_id,
         'created_at': task.created_at.isoformat(),
         'updated_at': task.updated_at.isoformat(),
@@ -110,6 +113,7 @@ def update_task(task_id):
     task.title = data.get('title', task.title)
     task.description = data.get('description', task.description)
     task.status = data.get('status', task.status)
+    task.kanban_status = data.get('kanban_status', task.kanban_status)
     task.updated_at = datetime.utcnow()
     
     db.session.commit()
@@ -202,6 +206,7 @@ def get_user_tasks(user_id):
         'title': task.title,
         'description': task.description,
         'status': task.status,
+        'kanban_status': task.kanban_status,
         'user_id': task.user_id,
         'created_at': task.created_at.isoformat(),
         'updated_at': task.updated_at.isoformat(),
@@ -220,7 +225,6 @@ def create_user():
     db.session.commit()
     return jsonify({'id': user.id, 'message': 'User created successfully'}), 201
 
-<<<<<<< HEAD
 # Rota para estatísticas
 @app.route('/stats', methods=['GET'])
 def get_stats():
@@ -258,8 +262,6 @@ def get_stats():
         'completion_rate': round(completion_rate, 2)
     })
 
-=======
->>>>>>> e095f5d (Patch: erros de exclusão corrigdos)
 def wait_for_db():
     """Aguarda o banco de dados estar disponível"""
     max_retries = 30
